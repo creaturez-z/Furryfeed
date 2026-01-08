@@ -22,6 +22,15 @@ export interface Pet {
   updated_at: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Meal {
   id: string;
   name: string;
@@ -30,8 +39,21 @@ export interface Meal {
   ingredients: string;
   nutritional_info?: string;
   image_url: string;
+  category_id?: string;
+  mrp?: number;
+  sale_price?: number;
   base_price_per_10g: number;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MealIngredient {
+  id: string;
+  meal_id: string;
+  ingredient_name: string;
+  quantity: number;
+  unit: 'grams' | 'kg' | 'ml' | 'liters' | 'pieces';
   created_at: string;
   updated_at: string;
 }
@@ -100,5 +122,31 @@ export interface DeliveryConfirmation {
   delivery_person_id: string;
   image_url: string;
   delivered_at: string;
+  created_at: string;
+}
+
+export interface Banner {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BannerSettings {
+  id: string;
+  rows_to_display: number;
+  banners_per_row: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BannerMeal {
+  id: string;
+  banner_id: string;
+  meal_id: string;
   created_at: string;
 }

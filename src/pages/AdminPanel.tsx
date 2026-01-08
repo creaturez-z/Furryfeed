@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, LogOut, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet } from 'lucide-react';
+import { ArrowLeft, LogOut, LayoutDashboard, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet, Users, Package, BarChart3 } from 'lucide-react';
 import { MealManagement } from '../components/admin/MealManagement';
 import { KitchenManagement } from '../components/admin/KitchenManagement';
 import { StaffManagement } from '../components/admin/StaffManagement';
@@ -10,12 +10,12 @@ import { WeightSlabManagement } from '../components/admin/WeightSlabManagement';
 import { BannerManagement } from '../components/admin/BannerManagement';
 import { WalletManagement } from '../components/admin/WalletManagement';
 
-type AdminTab = 'meals' | 'weight-slabs' | 'banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet';
+type AdminTab = 'dashboard' | 'meals' | 'weight-slabs' | 'banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports';
 
 export function AdminPanel() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState<AdminTab>('meals');
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
 
   const handleLogout = async () => {
     await signOut();
@@ -51,6 +51,17 @@ export function AdminPanel() {
         <div className="bg-white rounded-xl shadow-md mb-6">
           <div className="flex border-b border-gray-200 overflow-x-auto">
             <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'dashboard'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <LayoutDashboard className="w-5 h-5" />
+              <span>Dashboard</span>
+            </button>
+            <button
               onClick={() => setActiveTab('meals')}
               className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
                 activeTab === 'meals'
@@ -60,28 +71,6 @@ export function AdminPanel() {
             >
               <UtensilsCrossed className="w-5 h-5" />
               <span>Meals</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('kitchens')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'kitchens'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Building className="w-5 h-5" />
-              <span>Kitchens</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('staff')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'staff'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <ChefHat className="w-5 h-5" />
-              <span>Kitchen Staff</span>
             </button>
             <button
               onClick={() => setActiveTab('weight-slabs')}
@@ -149,9 +138,48 @@ export function AdminPanel() {
               <Wallet className="w-5 h-5" />
               <span>Wallet</span>
             </button>
+            <button
+              onClick={() => setActiveTab('customers')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'customers'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Users className="w-5 h-5" />
+              <span>Customers</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('subscriptions')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'subscriptions'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Package className="w-5 h-5" />
+              <span>Subscriptions</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('reports')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'reports'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <BarChart3 className="w-5 h-5" />
+              <span>Reports</span>
+            </button>
           </div>
         </div>
 
+        {activeTab === 'dashboard' && (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Dashboard Overview</h2>
+            <p className="text-gray-600">Welcome to the admin panel. Use the tabs above to manage your platform.</p>
+          </div>
+        )}
         {activeTab === 'meals' && <MealManagement />}
         {activeTab === 'weight-slabs' && <WeightSlabManagement />}
         {activeTab === 'banners' && <BannerManagement />}
@@ -159,6 +187,24 @@ export function AdminPanel() {
         {activeTab === 'staff' && <StaffManagement />}
         {activeTab === 'delivery' && <DeliveryManagement />}
         {activeTab === 'wallet' && <WalletManagement />}
+        {activeTab === 'customers' && (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Customer Management</h2>
+            <p className="text-gray-600">Customer management coming soon...</p>
+          </div>
+        )}
+        {activeTab === 'subscriptions' && (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Subscription Management</h2>
+            <p className="text-gray-600">Subscription management coming soon...</p>
+          </div>
+        )}
+        {activeTab === 'reports' && (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Reports & Analytics</h2>
+            <p className="text-gray-600">Reports coming soon...</p>
+          </div>
+        )}
       </div>
     </div>
   );

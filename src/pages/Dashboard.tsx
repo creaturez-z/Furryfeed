@@ -2,19 +2,21 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Pet, Subscription, Meal } from '../types/database';
-import { ArrowLeft, Plus, PawPrint, Package, User, Trash2, Edit } from 'lucide-react';
+import { Pet, Subscription, Meal, Wallet } from '../types/database';
+import { ArrowLeft, Plus, PawPrint, Package, User, Trash2, Edit, Wallet as WalletIcon } from 'lucide-react';
 import { PetForm } from '../components/PetForm';
 import { ProfileForm } from '../components/ProfileForm';
+import { ensureWalletExists } from '../utils/wallet';
 
 type Tab = 'subscriptions' | 'pets' | 'profile';
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('subscriptions');
   const [pets, setPets] = useState<Pet[]>([]);
   const [subscriptions, setSubscriptions] = useState<(Subscription & { meal?: Meal; pet?: Pet })[]>([]);
+  const [wallet, setWallet] = useState<Wallet | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPetForm, setShowPetForm] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
@@ -25,9 +27,19 @@ export function Dashboard() {
 
   const loadData = async () => {
     try {
-      await Promise.all([loadPets(), loadSubscriptions()]);
+      await Promise.all([loadPets(), loadSubscriptions(), loadWallet()]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadWallet = async () => {
+    if (!user) return;
+    try {
+      const walletData = await ensureWalletExists(user.id);
+      setWallet(walletData);
+    } catch (error) {
+      console.error('Error loading wallet:', error);
     }
   };
 
@@ -105,7 +117,13 @@ export function Dashboard() {
               <span>Home</span>
             </button>
             <h1 className="text-xl font-bold text-gray-900">My Dashboard</h1>
-            <div className="w-20"></div>
+            <button
+              onClick={() => navigate('/wallet')}
+              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 transition-colors"
+            >
+              <WalletIcon className="w-5 h-5" />
+              <span className="hidden sm:inline">₹{wallet?.balance.toFixed(2) || '0.00'}</span>
+            </button>
           </div>
         </div>
       </nav>

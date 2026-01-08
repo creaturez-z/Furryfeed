@@ -7,6 +7,7 @@ import { Landing } from './pages/Landing';
 import { MealDetails } from './pages/MealDetails';
 import { Dashboard } from './pages/Dashboard';
 import { Subscribe } from './pages/Subscribe';
+import { CustomerWallet } from './pages/CustomerWallet';
 import { AdminPanel } from './pages/AdminPanel';
 import { KitchenDashboard } from './pages/KitchenDashboard';
 import { DeliveryDashboard } from './pages/DeliveryDashboard';
@@ -89,6 +90,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['customer']}>
             <Subscribe />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/wallet"
+        element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <CustomerWallet />
           </ProtectedRoute>
         }
       />

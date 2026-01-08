@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Meal } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
-import { ShoppingBag, User, LogOut } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Settings } from 'lucide-react';
 
 export function Landing() {
   const navigate = useNavigate();
@@ -46,6 +46,15 @@ export function Landing() {
               <span className="text-xl font-bold text-gray-900">PetMeals</span>
             </div>
             <div className="flex items-center space-x-4">
+              {profile?.role === 'admin' && (
+                <button
+                  onClick={() => navigate('/admin')}
+                  className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  <Settings className="w-5 h-5" />
+                  <span className="hidden sm:inline">Admin Panel</span>
+                </button>
+              )}
               {profile?.role === 'customer' && (
                 <button
                   onClick={() => navigate('/dashboard')}

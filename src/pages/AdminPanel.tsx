@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, LogOut, UtensilsCrossed, Building, ChefHat, Truck } from 'lucide-react';
+import { ArrowLeft, LogOut, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet } from 'lucide-react';
 import { MealManagement } from '../components/admin/MealManagement';
 import { KitchenManagement } from '../components/admin/KitchenManagement';
 import { StaffManagement } from '../components/admin/StaffManagement';
 import { DeliveryManagement } from '../components/admin/DeliveryManagement';
+import { WeightSlabManagement } from '../components/admin/WeightSlabManagement';
+import { BannerManagement } from '../components/admin/BannerManagement';
+import { WalletManagement } from '../components/admin/WalletManagement';
 
-type AdminTab = 'meals' | 'kitchens' | 'staff' | 'delivery';
+type AdminTab = 'meals' | 'weight-slabs' | 'banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet';
 
 export function AdminPanel() {
   const navigate = useNavigate();
@@ -81,6 +84,50 @@ export function AdminPanel() {
               <span>Kitchen Staff</span>
             </button>
             <button
+              onClick={() => setActiveTab('weight-slabs')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'weight-slabs'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Weight className="w-5 h-5" />
+              <span>Weight Slabs</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('banners')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'banners'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Image className="w-5 h-5" />
+              <span>Banners</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('kitchens')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'kitchens'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Building className="w-5 h-5" />
+              <span>Kitchens</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('staff')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'staff'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <ChefHat className="w-5 h-5" />
+              <span>Kitchen Staff</span>
+            </button>
+            <button
               onClick={() => setActiveTab('delivery')}
               className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
                 activeTab === 'delivery'
@@ -91,13 +138,27 @@ export function AdminPanel() {
               <Truck className="w-5 h-5" />
               <span>Delivery</span>
             </button>
+            <button
+              onClick={() => setActiveTab('wallet')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'wallet'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Wallet className="w-5 h-5" />
+              <span>Wallet</span>
+            </button>
           </div>
         </div>
 
         {activeTab === 'meals' && <MealManagement />}
+        {activeTab === 'weight-slabs' && <WeightSlabManagement />}
+        {activeTab === 'banners' && <BannerManagement />}
         {activeTab === 'kitchens' && <KitchenManagement />}
         {activeTab === 'staff' && <StaffManagement />}
         {activeTab === 'delivery' && <DeliveryManagement />}
+        {activeTab === 'wallet' && <WalletManagement />}
       </div>
     </div>
   );

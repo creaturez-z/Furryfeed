@@ -3,8 +3,17 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Meal, Pet, WeightSlab, Profile } from '../types/database';
-import { ArrowLeft, Wallet, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Wallet as WalletIcon, AlertCircle } from 'lucide-react';
 import { calculateSubscriptionTax, TaxCalculation } from '../utils/tax';
+import { ensureWalletExists } from '../utils/wallet';
+
+type Wallet = {
+  id: string;
+  customer_id: string;
+  balance: number;
+  created_at: string;
+  updated_at: string;
+};
 
 export function Subscribe() {
   const navigate = useNavigate();
@@ -14,6 +23,7 @@ export function Subscribe() {
 
   const [pets, setPets] = useState<Pet[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [wallet, setWallet] = useState<Wallet | null>(null);
   const [weightSlabs, setWeightSlabs] = useState<WeightSlab[]>([]);
   const [selectedPetId, setSelectedPetId] = useState('');
   const [subscriptionType, setSubscriptionType] = useState<'daily' | 'weekly'>('daily');
@@ -55,6 +65,10 @@ export function Subscribe() {
         setError('Your account is temporarily restricted. Please contact support.');
         return;
       }
+
+      // Load wallet
+      const walletData = await ensureWalletExists(user!.id);
+      setWallet(walletData);
 
       if (petsRes.data && petsRes.data.length > 0) {
         setSelectedPetId(petsRes.data[0].id);
@@ -128,15 +142,15 @@ export function Subscribe() {
     const { quantity, price } = calculateDetails();
     const finalAmount = taxCalculation?.total || price;
 
-    if (!profile) {
-      setError('Could not load profile');
+    if (!wallet) {
+      setError('Could not load wallet');
       return;
     }
 
-    if (profile.wallet_balance < finalAmount) {
+    if (wallet.balance < finalAmount) {
       setShowWalletWarning(true);
       setError(
-        `Insufficient wallet balance. You need ₹${finalAmount.toFixed(2)} but only have ₹${profile.wallet_balance.toFixed(
+        `Insufficient wallet balance. You need ₹${finalAmount.toFixed(2)} but only have ₹${wallet.balance.toFixed(
           2
         )}.`
       );
@@ -163,20 +177,21 @@ export function Subscribe() {
 
       if (subError) throw subError;
 
-      const newBalance = profile.wallet_balance - finalAmount;
+      const newBalance = wallet.balance - finalAmount;
       const { error: walletError } = await supabase
-        .from('profiles')
-        .update({ wallet_balance: newBalance })
-        .eq('id', user!.id);
+        .from('wallets')
+        .update({ balance: newBalance, updated_at: new Date().toISOString() })
+        .eq('id', wallet.id);
 
       if (walletError) throw walletError;
 
       const { error: transactionError } = await supabase.from('wallet_transactions').insert({
+        wallet_id: wallet.id,
         customer_id: user!.id,
         type: 'debit',
-        amount: price,
-        description: `Subscription payment for ${meal!.name}`,
-        balance_after: newBalance,
+        amount: finalAmount,
+        reason: `Subscription payment for ${meal!.name}`,
+        reference_type: 'subscription_charge',
       });
 
       if (transactionError) throw transactionError;
@@ -232,12 +247,12 @@ export function Subscribe() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Create Subscription</h1>
-            {profile && (
+            {wallet && (
               <div className="flex items-center space-x-2 px-4 py-2 bg-orange-50 rounded-lg">
-                <Wallet className="w-5 h-5 text-orange-500" />
+                <WalletIcon className="w-5 h-5 text-orange-500" />
                 <span className="text-sm text-gray-600">Wallet:</span>
                 <span className="font-semibold text-orange-600">
-                  ₹{profile.wallet_balance.toFixed(2)}
+                  ₹{wallet.balance.toFixed(2)}
                 </span>
               </div>
             )}

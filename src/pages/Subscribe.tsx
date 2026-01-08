@@ -89,13 +89,15 @@ export function Subscribe() {
   useEffect(() => {
     const loadTaxCalculation = async () => {
       const { price } = calculateDetails();
-      if (price > 0) {
+      if (price > 0 && pets.length > 0) {
         const taxCalc = await calculateSubscriptionTax(price);
         setTaxCalculation(taxCalc);
+      } else {
+        setTaxCalculation(null);
       }
     };
     loadTaxCalculation();
-  }, [selectedPetId, meal]);
+  }, [selectedPetId, meal, pets]);
 
   const handleWeekdayToggle = (day: number) => {
     setSelectedWeekdays((prev) =>
@@ -401,7 +403,7 @@ export function Subscribe() {
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">Subtotal:</span>
                         <span className="font-medium text-gray-900">
-                          ₹{(taxCalculation?.subtotal || price).toFixed(2)}
+                          ₹{((taxCalculation?.subtotal ?? price) || 0).toFixed(2)}
                         </span>
                       </div>
                       {taxCalculation && taxCalculation.taxPercentage > 0 && (
@@ -411,7 +413,7 @@ export function Subscribe() {
                               {taxCalculation.taxName} ({taxCalculation.taxPercentage}%):
                             </span>
                             <span className="font-medium text-gray-900">
-                              ₹{taxCalculation.taxAmount.toFixed(2)}
+                              ₹{(taxCalculation.taxAmount || 0).toFixed(2)}
                             </span>
                           </div>
                         </>
@@ -422,7 +424,7 @@ export function Subscribe() {
                             Daily Total:
                           </span>
                           <span className="text-3xl font-bold text-orange-500">
-                            ₹{(taxCalculation?.total || price).toFixed(2)}
+                            ₹{((taxCalculation?.total ?? price) || 0).toFixed(2)}
                           </span>
                         </div>
                       </div>

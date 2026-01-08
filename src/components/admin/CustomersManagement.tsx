@@ -1,23 +1,23 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Profile } from '../../types/database';
+import { ProfileWithWallet } from '../../types/database';
 import { Search, Plus, Edit, Trash2, Ban, CheckCircle, X, Save } from 'lucide-react';
 
 export function CustomersManagement() {
-  const [customers, setCustomers] = useState<Profile[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<Profile[]>([]);
+  const [customers, setCustomers] = useState<ProfileWithWallet[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<ProfileWithWallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Profile | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<ProfileWithWallet | null>(null);
   const [showBanModal, setShowBanModal] = useState(false);
-  const [banningCustomer, setBanningCustomer] = useState<Profile | null>(null);
+  const [banningCustomer, setBanningCustomer] = useState<ProfileWithWallet | null>(null);
   const [banReason, setBanReason] = useState('');
   const [formData, setFormData] = useState({
-    full_name: '',
+    name: '',
     email: '',
     phone: '',
-    address: '',
+    alternative_phone: '',
   });
 
   useEffect(() => {
@@ -27,8 +27,8 @@ export function CustomersManagement() {
   useEffect(() => {
     const filtered = customers.filter(
       (customer) =>
-        customer.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
         customer.phone.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredCustomers(filtered);
@@ -37,15 +37,24 @@ export function CustomersManagement() {
   const loadCustomers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          wallets(balance)
+        `)
         .eq('role', 'customer')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setCustomers(data || []);
-      setFilteredCustomers(data || []);
+      if (profilesError) throw profilesError;
+
+      const customersWithWallet: ProfileWithWallet[] = (profilesData || []).map((profile: any) => ({
+        ...profile,
+        wallet_balance: profile.wallets?.[0]?.balance || 0,
+      }));
+
+      setCustomers(customersWithWallet);
+      setFilteredCustomers(customersWithWallet);
     } catch (error) {
       console.error('Error loading customers:', error);
     } finally {
@@ -61,9 +70,8 @@ export function CustomersManagement() {
         const { error } = await supabase
           .from('profiles')
           .update({
-            full_name: formData.full_name,
-            email: formData.email,
-            address: formData.address,
+            name: formData.name,
+            alternative_phone: formData.alternative_phone,
           })
           .eq('id', editingCustomer.id);
 
@@ -72,14 +80,6 @@ export function CustomersManagement() {
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: formData.email,
           password: Math.random().toString(36).slice(-8) + 'Aa1!',
-          options: {
-            data: {
-              full_name: formData.full_name,
-              phone: formData.phone,
-              address: formData.address,
-              role: 'customer',
-            },
-          },
         });
 
         if (authError) throw authError;
@@ -87,12 +87,11 @@ export function CustomersManagement() {
         if (authData.user) {
           const { error: profileError } = await supabase.from('profiles').insert({
             id: authData.user.id,
-            full_name: formData.full_name,
+            name: formData.name,
             email: formData.email,
             phone: formData.phone,
-            address: formData.address,
+            alternative_phone: formData.alternative_phone,
             role: 'customer',
-            wallet_balance: 0,
           });
 
           if (profileError) throw profileError;
@@ -107,13 +106,13 @@ export function CustomersManagement() {
     }
   };
 
-  const handleEdit = (customer: Profile) => {
+  const handleEdit = (customer: ProfileWithWallet) => {
     setEditingCustomer(customer);
     setFormData({
-      full_name: customer.full_name,
-      email: customer.email,
+      name: customer.name,
+      email: customer.email || '',
       phone: customer.phone,
-      address: customer.address || '',
+      alternative_phone: customer.alternative_phone || '',
     });
     setShowForm(true);
   };
@@ -133,7 +132,7 @@ export function CustomersManagement() {
     }
   };
 
-  const handleBanClick = (customer: Profile) => {
+  const handleBanClick = (customer: ProfileWithWallet) => {
     setBanningCustomer(customer);
     setBanReason('');
     setShowBanModal(true);
@@ -176,10 +175,10 @@ export function CustomersManagement() {
 
   const resetForm = () => {
     setFormData({
-      full_name: '',
+      name: '',
       email: '',
       phone: '',
-      address: '',
+      alternative_phone: '',
     });
     setEditingCustomer(null);
     setShowForm(false);
@@ -228,13 +227,13 @@ export function CustomersManagement() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name *
+                  Name *
                 </label>
                 <input
                   type="text"
                   required
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                 />
               </div>
@@ -245,7 +244,8 @@ export function CustomersManagement() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  disabled={!!editingCustomer}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -264,11 +264,13 @@ export function CustomersManagement() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Alternative Phone
+                </label>
                 <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  type="tel"
+                  value={formData.alternative_phone}
+                  onChange={(e) => setFormData({ ...formData, alternative_phone: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                 />
               </div>
@@ -321,16 +323,16 @@ export function CustomersManagement() {
                 filteredCustomers.map((customer) => (
                   <tr key={customer.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-4 px-6">
-                      <div className="font-medium text-gray-900">{customer.full_name}</div>
-                      {customer.address && (
-                        <div className="text-xs text-gray-500">{customer.address}</div>
+                      <div className="font-medium text-gray-900">{customer.name}</div>
+                      {customer.alternative_phone && (
+                        <div className="text-xs text-gray-500">Alt: {customer.alternative_phone}</div>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-sm text-gray-700">{customer.email}</td>
+                    <td className="py-4 px-6 text-sm text-gray-700">{customer.email || 'N/A'}</td>
                     <td className="py-4 px-6 text-sm text-gray-700">{customer.phone}</td>
                     <td className="py-4 px-6">
                       <span className="text-sm font-medium text-orange-600">
-                        ₹{customer.wallet_balance.toFixed(2)}
+                        ₹{(customer.wallet_balance || 0).toFixed(2)}
                       </span>
                     </td>
                     <td className="py-4 px-6">
@@ -395,8 +397,8 @@ export function CustomersManagement() {
             </h3>
             <p className="text-sm text-gray-600 mb-4">
               {banningCustomer.is_banned
-                ? `Are you sure you want to unban ${banningCustomer.full_name}?`
-                : `Are you sure you want to ban ${banningCustomer.full_name}?`}
+                ? `Are you sure you want to unban ${banningCustomer.name}?`
+                : `Are you sure you want to ban ${banningCustomer.name}?`}
             </p>
             {!banningCustomer.is_banned && (
               <div className="mb-4">

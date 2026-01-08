@@ -274,7 +274,7 @@ export function KitchenDashboard() {
                           <div className="mt-2 space-y-1 text-sm text-gray-600">
                             <p>
                               <span className="font-medium">Customer:</span>{' '}
-                              {order.customer?.full_name}
+                              {order.customer?.name}
                             </p>
                             <p>
                               <span className="font-medium">Pet:</span> {order.pet?.name} (

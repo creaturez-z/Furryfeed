@@ -32,7 +32,7 @@ interface OrderData {
   tax_amount?: number;
   status: string;
   created_at: string;
-  customer?: { full_name: string; email: string };
+  customer?: { name: string; email?: string; phone: string };
   pet?: { name: string; breed: string; weight: number };
   meal?: { name: string; sale_price?: number };
 }
@@ -123,7 +123,7 @@ export function ReportsManagement() {
         .select(
           `
           *,
-          customer:profiles!orders_customer_id_fkey(full_name, email),
+          customer:profiles!orders_customer_id_fkey(name, email, phone),
           pet:pets(name, breed, weight),
           meal:meals(name, sale_price)
         `
@@ -205,7 +205,7 @@ export function ReportsManagement() {
       case 'sales':
         csvContent = 'Order ID,Customer,Pet,Product,Quantity,Sale Price,Total Amount,Date\n';
         orders.forEach((order) => {
-          csvContent += `${order.id},${order.customer?.full_name || 'N/A'},${order.pet?.name || 'N/A'},${
+          csvContent += `${order.id},${order.customer?.name || 'N/A'},${order.pet?.name || 'N/A'},${
             order.meal?.name || 'N/A'
           },${order.quantity},${order.meal?.sale_price || 0},${order.total_amount},${new Date(
             order.created_at
@@ -231,7 +231,7 @@ export function ReportsManagement() {
       case 'orders':
         csvContent = 'Order ID,Customer,Pet,Status,Date,Payment Method,Total\n';
         orders.forEach((order) => {
-          csvContent += `${order.id},${order.customer?.full_name || 'N/A'},${order.pet?.name || 'N/A'},${
+          csvContent += `${order.id},${order.customer?.name || 'N/A'},${order.pet?.name || 'N/A'},${
             order.status
           },${new Date(order.created_at).toLocaleString()},Wallet,${order.total_amount}\n`;
         });
@@ -262,7 +262,7 @@ export function ReportsManagement() {
                 name: order.pet?.name || 'N/A',
                 breed: order.pet?.breed || 'N/A',
                 weight: order.pet?.weight || 0,
-                customer: order.customer?.full_name || 'N/A',
+                customer: order.customer?.name || 'N/A',
               },
             ])
           ).values()

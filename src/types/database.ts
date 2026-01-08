@@ -1,16 +1,24 @@
 export interface Profile {
   id: string;
-  full_name: string;
-  email: string;
+  name: string;
   phone: string;
-  address?: string;
-  wallet_balance: number;
+  alternative_phone?: string;
+  alternative_email?: string;
   role: 'customer' | 'admin' | 'kitchen_staff' | 'delivery_person';
-  is_banned: boolean;
+  is_banned?: boolean;
   banned_at?: string;
   ban_reason?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProfileWithEmail extends Profile {
+  email?: string;
+}
+
+export interface ProfileWithWallet extends Profile {
+  wallet_balance?: number;
+  email?: string;
 }
 
 export interface Pet {
@@ -157,19 +165,32 @@ export interface BannerMeal {
 
 export interface WeightSlab {
   id: string;
+  meal_id: string;
   min_weight: number;
   max_weight: number;
   food_quantity: number;
+  price: number;
   created_at: string;
   updated_at: string;
 }
 
 export interface WalletTransaction {
   id: string;
+  wallet_id: string;
   customer_id: string;
   type: 'credit' | 'debit';
   amount: number;
-  description: string;
-  balance_after: number;
+  reason: string;
+  reference_type: 'admin_adjustment' | 'subscription_charge' | 'recharge';
+  reference_id?: string;
+  admin_id?: string;
   created_at: string;
+}
+
+export interface Wallet {
+  id: string;
+  customer_id: string;
+  balance: number;
+  created_at: string;
+  updated_at: string;
 }

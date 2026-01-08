@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Profile, WalletTransaction } from '../../types/database';
+import { ProfileWithWallet, WalletTransaction, Wallet } from '../../types/database';
 import { Search, Plus, Minus, History } from 'lucide-react';
+import { creditWallet, debitWallet } from '../../utils/wallet';
 
 export function WalletManagement() {
-  const [customers, setCustomers] = useState<Profile[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<Profile | null>(null);
+  const [customers, setCustomers] = useState<ProfileWithWallet[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<ProfileWithWallet | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -25,12 +26,21 @@ export function WalletManagement() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          wallets(balance)
+        `)
         .eq('role', 'customer')
-        .order('full_name');
+        .order('name');
 
       if (error) throw error;
-      setCustomers(data || []);
+
+      const customersWithWallet: ProfileWithWallet[] = (data || []).map((profile: any) => ({
+        ...profile,
+        wallet_balance: profile.wallets?.[0]?.balance || 0,
+      }));
+
+      setCustomers(customersWithWallet);
     } catch (error) {
       console.error('Error loading customers:', error);
     } finally {
@@ -121,8 +131,9 @@ export function WalletManagement() {
 
   const filteredCustomers = customers.filter(
     (customer) =>
-      customer.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      customer.phone.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -160,7 +171,7 @@ export function WalletManagement() {
                   : 'bg-white border-gray-200 hover:bg-gray-50'
               }`}
             >
-              <div className="font-medium text-gray-900">{customer.full_name}</div>
+              <div className="font-medium text-gray-900">{customer.name}</div>
               <div className="text-xs text-gray-600">{customer.email}</div>
               <div className="text-sm font-semibold text-orange-600 mt-1">
                 ₹{customer.wallet_balance.toFixed(2)}
@@ -179,7 +190,7 @@ export function WalletManagement() {
             <div className="bg-white rounded-xl shadow-md p-6">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">{selectedCustomer.full_name}</h3>
+                  <h3 className="text-xl font-bold text-gray-900">{selectedCustomer.name}</h3>
                   <p className="text-sm text-gray-600">{selectedCustomer.email}</p>
                   <p className="text-sm text-gray-600">{selectedCustomer.phone}</p>
                 </div>

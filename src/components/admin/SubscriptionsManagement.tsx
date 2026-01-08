@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Subscription, Profile, Pet, Meal } from '../../types/database';
+import { Subscription, ProfileWithEmail, Pet, Meal } from '../../types/database';
 import { Search, Play, Pause, XCircle, Eye } from 'lucide-react';
 
 type SubscriptionWithDetails = Subscription & {
-  customer?: Profile;
+  customer?: ProfileWithEmail;
   pet?: Pet;
   meal?: Meal;
 };
@@ -28,7 +28,8 @@ export function SubscriptionsManagement() {
     if (searchTerm) {
       filtered = filtered.filter(
         (sub) =>
-          sub.customer?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          sub.customer?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          sub.customer?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           sub.pet?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           sub.meal?.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -167,8 +168,8 @@ export function SubscriptionsManagement() {
                 filteredSubscriptions.map((subscription) => (
                   <tr key={subscription.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-4 px-6">
-                      <div className="font-medium text-gray-900">{subscription.customer?.full_name}</div>
-                      <div className="text-xs text-gray-500">{subscription.customer?.email}</div>
+                      <div className="font-medium text-gray-900">{subscription.customer?.name}</div>
+                      <div className="text-xs text-gray-500">{subscription.customer?.email || subscription.customer?.phone}</div>
                     </td>
                     <td className="py-4 px-6 text-sm text-gray-700">{subscription.pet?.name}</td>
                     <td className="py-4 px-6 text-sm text-gray-700">{subscription.meal?.name}</td>
@@ -264,8 +265,8 @@ export function SubscriptionsManagement() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Customer</p>
-                    <p className="font-medium text-gray-900">{selectedSubscription.customer?.full_name}</p>
-                    <p className="text-sm text-gray-600">{selectedSubscription.customer?.email}</p>
+                    <p className="font-medium text-gray-900">{selectedSubscription.customer?.name}</p>
+                    <p className="text-sm text-gray-600">{selectedSubscription.customer?.email || 'No email'}</p>
                     <p className="text-sm text-gray-600">{selectedSubscription.customer?.phone}</p>
                   </div>
                   <div>

@@ -11,6 +11,7 @@ import { BannerManagement } from '../components/admin/BannerManagement';
 import { WalletManagement } from '../components/admin/WalletManagement';
 import { CustomersManagement } from '../components/admin/CustomersManagement';
 import { SubscriptionsManagement } from '../components/admin/SubscriptionsManagement';
+import { ReportsManagement } from '../components/admin/ReportsManagement';
 
 type AdminTab = 'dashboard' | 'meals' | 'weight-slabs' | 'banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports';
 
@@ -191,12 +192,7 @@ export function AdminPanel() {
         {activeTab === 'wallet' && <WalletManagement />}
         {activeTab === 'customers' && <CustomersManagement />}
         {activeTab === 'subscriptions' && <SubscriptionsManagement />}
-        {activeTab === 'reports' && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Reports & Analytics</h2>
-            <p className="text-gray-600">Reports coming soon...</p>
-          </div>
-        )}
+        {activeTab === 'reports' && <ReportsManagement />}
       </div>
     </div>
   );

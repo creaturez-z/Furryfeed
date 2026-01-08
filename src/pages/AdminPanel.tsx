@@ -9,6 +9,8 @@ import { DeliveryManagement } from '../components/admin/DeliveryManagement';
 import { WeightSlabManagement } from '../components/admin/WeightSlabManagement';
 import { BannerManagement } from '../components/admin/BannerManagement';
 import { WalletManagement } from '../components/admin/WalletManagement';
+import { CustomersManagement } from '../components/admin/CustomersManagement';
+import { SubscriptionsManagement } from '../components/admin/SubscriptionsManagement';
 
 type AdminTab = 'dashboard' | 'meals' | 'weight-slabs' | 'banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports';
 
@@ -187,18 +189,8 @@ export function AdminPanel() {
         {activeTab === 'staff' && <StaffManagement />}
         {activeTab === 'delivery' && <DeliveryManagement />}
         {activeTab === 'wallet' && <WalletManagement />}
-        {activeTab === 'customers' && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Customer Management</h2>
-            <p className="text-gray-600">Customer management coming soon...</p>
-          </div>
-        )}
-        {activeTab === 'subscriptions' && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Subscription Management</h2>
-            <p className="text-gray-600">Subscription management coming soon...</p>
-          </div>
-        )}
+        {activeTab === 'customers' && <CustomersManagement />}
+        {activeTab === 'subscriptions' && <SubscriptionsManagement />}
         {activeTab === 'reports' && (
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Reports & Analytics</h2>

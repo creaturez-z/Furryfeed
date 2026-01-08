@@ -49,6 +49,11 @@ export function Subscribe() {
       setWeightSlabs(weightSlabsRes.data || []);
       setProfile(profileRes.data);
 
+      if (profileRes.data?.is_banned) {
+        setError('Your account is temporarily restricted. Please contact support.');
+        return;
+      }
+
       if (petsRes.data && petsRes.data.length > 0) {
         setSelectedPetId(petsRes.data[0].id);
       }

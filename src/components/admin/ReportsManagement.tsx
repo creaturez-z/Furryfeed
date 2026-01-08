@@ -26,6 +26,10 @@ interface OrderData {
   meal_id: string;
   quantity: number;
   total_amount: number;
+  subtotal_amount?: number;
+  tax_name?: string;
+  tax_percentage?: number;
+  tax_amount?: number;
   status: string;
   created_at: string;
   customer?: { full_name: string; email: string };
@@ -211,15 +215,17 @@ export function ReportsManagement() {
         break;
 
       case 'gst':
-        csvContent = 'Invoice Number,Taxable Amount,GST %,GST Amount,Total Amount,Date\n';
+        csvContent = 'Invoice Number,Taxable Amount,Tax Name,Tax %,Tax Amount,Total Amount,Date\n';
         orders.forEach((order, index) => {
-          const taxableAmount = order.total_amount / 1.18;
-          const gstAmount = order.total_amount - taxableAmount;
-          csvContent += `INV-${String(index + 1).padStart(6, '0')},${taxableAmount.toFixed(2)},18%,${gstAmount.toFixed(
+          const subtotal = order.subtotal_amount || order.total_amount;
+          const taxName = order.tax_name || 'N/A';
+          const taxPercentage = order.tax_percentage || 0;
+          const taxAmount = order.tax_amount || 0;
+          csvContent += `INV-${String(index + 1).padStart(6, '0')},${subtotal.toFixed(2)},${taxName},${taxPercentage}%,${taxAmount.toFixed(
             2
           )},${order.total_amount},${new Date(order.created_at).toLocaleString()}\n`;
         });
-        filename = `gst_sales_report_${startDate}_to_${endDate}.csv`;
+        filename = `tax_sales_report_${startDate}_to_${endDate}.csv`;
         break;
 
       case 'orders':
@@ -504,8 +510,8 @@ export function ReportsManagement() {
           </div>
 
           <div className="p-4 border border-gray-200 rounded-lg">
-            <h4 className="font-medium text-gray-900 mb-2">GST Sales Report</h4>
-            <p className="text-sm text-gray-600 mb-3">Invoice-wise GST breakdown with tax calculations</p>
+            <h4 className="font-medium text-gray-900 mb-2">Tax Sales Report</h4>
+            <p className="text-sm text-gray-600 mb-3">Invoice-wise tax breakdown with detailed calculations</p>
             <div className="flex space-x-2">
               <button
                 onClick={() => exportToCSV('gst')}

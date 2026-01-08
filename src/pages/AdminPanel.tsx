@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, LogOut, LayoutDashboard, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet, Users, Package, BarChart3 } from 'lucide-react';
+import { ArrowLeft, LogOut, LayoutDashboard, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet, Users, Package, BarChart3, Receipt } from 'lucide-react';
 import { MealManagement } from '../components/admin/MealManagement';
 import { KitchenManagement } from '../components/admin/KitchenManagement';
 import { StaffManagement } from '../components/admin/StaffManagement';
 import { DeliveryManagement } from '../components/admin/DeliveryManagement';
 import { WeightSlabManagement } from '../components/admin/WeightSlabManagement';
+import { TaxConfigurationManagement } from '../components/admin/TaxConfigurationManagement';
 import { BannerManagement } from '../components/admin/BannerManagement';
 import { WalletManagement } from '../components/admin/WalletManagement';
 import { CustomersManagement } from '../components/admin/CustomersManagement';
 import { SubscriptionsManagement } from '../components/admin/SubscriptionsManagement';
 import { ReportsManagement } from '../components/admin/ReportsManagement';
 
-type AdminTab = 'dashboard' | 'meals' | 'weight-slabs' | 'banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports';
+type AdminTab = 'dashboard' | 'meals' | 'weight-slabs' | 'tax-config' | 'banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports';
 
 export function AdminPanel() {
   const navigate = useNavigate();
@@ -85,6 +86,17 @@ export function AdminPanel() {
             >
               <Weight className="w-5 h-5" />
               <span>Weight Slabs</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('tax-config')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'tax-config'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Receipt className="w-5 h-5" />
+              <span>Tax Config</span>
             </button>
             <button
               onClick={() => setActiveTab('banners')}
@@ -185,6 +197,7 @@ export function AdminPanel() {
         )}
         {activeTab === 'meals' && <MealManagement />}
         {activeTab === 'weight-slabs' && <WeightSlabManagement />}
+        {activeTab === 'tax-config' && <TaxConfigurationManagement />}
         {activeTab === 'banners' && <BannerManagement />}
         {activeTab === 'kitchens' && <KitchenManagement />}
         {activeTab === 'staff' && <StaffManagement />}

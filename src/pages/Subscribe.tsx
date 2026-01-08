@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Meal, Pet, WeightSlab, Profile } from '../types/database';
 import { ArrowLeft, Wallet, AlertCircle } from 'lucide-react';
+import { calculateSubscriptionTax, TaxCalculation } from '../utils/tax';
 
 export function Subscribe() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export function Subscribe() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showWalletWarning, setShowWalletWarning] = useState(false);
+  const [taxCalculation, setTaxCalculation] = useState<TaxCalculation | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -84,6 +86,17 @@ export function Subscribe() {
     return { quantity, price };
   };
 
+  useEffect(() => {
+    const loadTaxCalculation = async () => {
+      const { price } = calculateDetails();
+      if (price > 0) {
+        const taxCalc = await calculateSubscriptionTax(price);
+        setTaxCalculation(taxCalc);
+      }
+    };
+    loadTaxCalculation();
+  }, [selectedPetId, meal]);
+
   const handleWeekdayToggle = (day: number) => {
     setSelectedWeekdays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()
@@ -111,16 +124,17 @@ export function Subscribe() {
     }
 
     const { quantity, price } = calculateDetails();
+    const finalAmount = taxCalculation?.total || price;
 
     if (!profile) {
       setError('Could not load profile');
       return;
     }
 
-    if (profile.wallet_balance < price) {
+    if (profile.wallet_balance < finalAmount) {
       setShowWalletWarning(true);
       setError(
-        `Insufficient wallet balance. You need ₹${price.toFixed(2)} but only have ₹${profile.wallet_balance.toFixed(
+        `Insufficient wallet balance. You need ₹${finalAmount.toFixed(2)} but only have ₹${profile.wallet_balance.toFixed(
           2
         )}.`
       );
@@ -136,14 +150,18 @@ export function Subscribe() {
         meal_id: meal!.id,
         subscription_type: subscriptionType,
         quantity,
-        calculated_price: price,
+        calculated_price: finalAmount,
+        subtotal_amount: taxCalculation?.subtotal || price,
+        tax_name: taxCalculation?.taxName,
+        tax_percentage: taxCalculation?.taxPercentage,
+        tax_amount: taxCalculation?.taxAmount || 0,
         status: 'active',
         start_date: startDate,
       });
 
       if (subError) throw subError;
 
-      const newBalance = profile.wallet_balance - price;
+      const newBalance = profile.wallet_balance - finalAmount;
       const { error: walletError } = await supabase
         .from('profiles')
         .update({ wallet_balance: newBalance })
@@ -379,14 +397,34 @@ export function Subscribe() {
                         ₹{(meal.sale_price || meal.base_price_per_10g).toFixed(2)}
                       </span>
                     </div>
-                    <div className="border-t border-orange-200 pt-4 mt-4">
+                    <div className="border-t border-orange-200 pt-4 mt-4 space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-lg font-semibold text-gray-900">
-                          Daily Price:
+                        <span className="text-gray-700">Subtotal:</span>
+                        <span className="font-medium text-gray-900">
+                          ₹{(taxCalculation?.subtotal || price).toFixed(2)}
                         </span>
-                        <span className="text-3xl font-bold text-orange-500">
-                          ₹{price.toFixed(2)}
-                        </span>
+                      </div>
+                      {taxCalculation && taxCalculation.taxPercentage > 0 && (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-700">
+                              {taxCalculation.taxName} ({taxCalculation.taxPercentage}%):
+                            </span>
+                            <span className="font-medium text-gray-900">
+                              ₹{taxCalculation.taxAmount.toFixed(2)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      <div className="border-t border-orange-200 pt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-semibold text-gray-900">
+                            Daily Total:
+                          </span>
+                          <span className="text-3xl font-bold text-orange-500">
+                            ₹{(taxCalculation?.total || price).toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </>

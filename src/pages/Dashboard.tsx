@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Pet, Subscription, Meal, Wallet } from '../types/database';
+import { Pet, Subscription, Meal, Wallet, SubscriptionPet, SubscriptionItem } from '../types/database';
 import { ArrowLeft, Plus, PawPrint, Package, User, Trash2, Edit, Wallet as WalletIcon } from 'lucide-react';
 import { PetForm } from '../components/PetForm';
 import { ProfileForm } from '../components/ProfileForm';
@@ -10,12 +10,19 @@ import { ensureWalletExists } from '../utils/wallet';
 
 type Tab = 'subscriptions' | 'pets' | 'profile';
 
+type EnrichedSubscription = Subscription & {
+  meal?: Meal;
+  pet?: Pet;
+  subscription_pets?: (SubscriptionPet & { pet?: Pet })[];
+  subscription_items?: (SubscriptionItem & { meal?: Meal })[];
+};
+
 export function Dashboard() {
   const navigate = useNavigate();
   const { profile, user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('subscriptions');
   const [pets, setPets] = useState<Pet[]>([]);
-  const [subscriptions, setSubscriptions] = useState<(Subscription & { meal?: Meal; pet?: Pet })[]>([]);
+  const [subscriptions, setSubscriptions] = useState<EnrichedSubscription[]>([]);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPetForm, setShowPetForm] = useState(false);
@@ -54,7 +61,7 @@ export function Dashboard() {
   };
 
   const loadSubscriptions = async () => {
-    const { data, error } = await supabase
+    const { data: subs, error } = await supabase
       .from('subscriptions')
       .select(`
         *,
@@ -64,7 +71,33 @@ export function Dashboard() {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    setSubscriptions(data || []);
+
+    if (!subs || subs.length === 0) {
+      setSubscriptions([]);
+      return;
+    }
+
+    const enrichedSubs: EnrichedSubscription[] = await Promise.all(
+      subs.map(async (sub) => {
+        const { data: subPets } = await supabase
+          .from('subscription_pets')
+          .select('*, pet:pets(*)')
+          .eq('subscription_id', sub.id);
+
+        const { data: subItems } = await supabase
+          .from('subscription_items')
+          .select('*, meal:meals(*)')
+          .eq('subscription_id', sub.id);
+
+        return {
+          ...sub,
+          subscription_pets: subPets || [],
+          subscription_items: subItems || [],
+        };
+      })
+    );
+
+    setSubscriptions(enrichedSubs);
   };
 
   const handleDeletePet = async (petId: string) => {
@@ -187,63 +220,132 @@ export function Dashboard() {
                     </button>
                   </div>
                 ) : (
-                  subscriptions.map((sub) => (
-                    <div key={sub.id} className="bg-white rounded-xl shadow-md p-6">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div className="flex items-start space-x-4">
-                          <img
-                            src={sub.meal?.image_url}
-                            alt={sub.meal?.name}
-                            className="w-20 h-20 rounded-lg object-cover"
-                          />
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">{sub.meal?.name}</h3>
-                            <p className="text-sm text-gray-600">For: {sub.pet?.name}</p>
-                            <p className="text-sm text-gray-600">Quantity: {sub.quantity}</p>
-                            <p className="text-sm text-gray-600">Type: {sub.subscription_type}</p>
-                            <p className="text-sm font-medium text-gray-900 mt-1">
-                              ₹{sub.calculated_price.toFixed(2)}
-                            </p>
+                  subscriptions.map((sub) => {
+                    const isMultiItem = (sub.subscription_pets?.length || 0) > 0 && (sub.subscription_items?.length || 0) > 0;
+                    const petCount = sub.subscription_pets?.length || 1;
+                    const itemCount = sub.subscription_items?.length || 1;
+
+                    return (
+                      <div key={sub.id} className="bg-white rounded-xl shadow-md p-6">
+                        <div className="flex flex-col gap-4">
+                          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                            <div className="flex-1">
+                              {isMultiItem ? (
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                      Multi-Item Subscription
+                                    </h3>
+                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                                      {petCount} {petCount === 1 ? 'Pet' : 'Pets'} × {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
+                                    </span>
+                                  </div>
+
+                                  {sub.subscription_pets?.map((subPet) => {
+                                    const petItems = sub.subscription_items?.filter(
+                                      (item) => item.subscription_pet_id === subPet.id
+                                    );
+
+                                    return (
+                                      <div key={subPet.id} className="mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                        <h4 className="font-medium text-gray-900 mb-2">
+                                          {subPet.pet?.name} ({(subPet.pet?.weight! / 1000).toFixed(2)}kg)
+                                        </h4>
+                                        <div className="space-y-1 ml-4">
+                                          {petItems?.map((item) => (
+                                            <div key={item.id} className="flex items-center justify-between text-sm">
+                                              <div className="flex items-center space-x-2">
+                                                <span className="text-gray-600">•</span>
+                                                <span className="text-gray-700">{item.meal?.name}</span>
+                                                <span className="text-gray-500">({item.quantity}g)</span>
+                                              </div>
+                                              <span className="text-gray-900 font-medium">
+                                                ₹{item.price_per_day.toFixed(2)}/day
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+
+                                  <div className="mt-3 pt-3 border-t border-gray-200">
+                                    <p className="text-sm text-gray-600">Type: <span className="capitalize">{sub.subscription_type}</span></p>
+                                    {sub.start_date && (
+                                      <p className="text-sm text-gray-600">
+                                        Duration: {new Date(sub.start_date).toLocaleDateString()} - {sub.end_date ? new Date(sub.end_date).toLocaleDateString() : 'Ongoing'}
+                                      </p>
+                                    )}
+                                    <p className="text-sm font-semibold text-gray-900 mt-2">
+                                      Total: ₹{sub.calculated_price.toFixed(2)}
+                                    </p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-start space-x-4">
+                                  <img
+                                    src={sub.meal?.image_url}
+                                    alt={sub.meal?.name}
+                                    className="w-20 h-20 rounded-lg object-cover"
+                                  />
+                                  <div>
+                                    <h3 className="text-lg font-semibold text-gray-900">{sub.meal?.name}</h3>
+                                    <p className="text-sm text-gray-600">For: {sub.pet?.name}</p>
+                                    <p className="text-sm text-gray-600">Quantity: {sub.quantity}g/day</p>
+                                    <p className="text-sm text-gray-600">Type: <span className="capitalize">{sub.subscription_type}</span></p>
+                                    {sub.start_date && (
+                                      <p className="text-sm text-gray-600">
+                                        {new Date(sub.start_date).toLocaleDateString()} - {sub.end_date ? new Date(sub.end_date).toLocaleDateString() : 'Ongoing'}
+                                      </p>
+                                    )}
+                                    <p className="text-sm font-medium text-gray-900 mt-1">
+                                      ₹{sub.calculated_price.toFixed(2)}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col items-start md:items-end space-y-2">
+                              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(sub.status)}`}>
+                                {sub.status}
+                              </span>
+                              {sub.status === 'active' && (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleUpdateSubscriptionStatus(sub.id, 'paused')}
+                                    className="text-sm text-yellow-600 hover:text-yellow-700"
+                                  >
+                                    Pause
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateSubscriptionStatus(sub.id, 'skipped')}
+                                    className="text-sm text-gray-600 hover:text-gray-700"
+                                  >
+                                    Skip
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateSubscriptionStatus(sub.id, 'cancelled')}
+                                    className="text-sm text-red-600 hover:text-red-700"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              )}
+                              {sub.status === 'paused' && (
+                                <button
+                                  onClick={() => handleUpdateSubscriptionStatus(sub.id, 'active')}
+                                  className="text-sm text-green-600 hover:text-green-700"
+                                >
+                                  Resume
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <div className="flex flex-col items-start md:items-end space-y-2">
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(sub.status)}`}>
-                            {sub.status}
-                          </span>
-                          {sub.status === 'active' && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleUpdateSubscriptionStatus(sub.id, 'paused')}
-                                className="text-sm text-yellow-600 hover:text-yellow-700"
-                              >
-                                Pause
-                              </button>
-                              <button
-                                onClick={() => handleUpdateSubscriptionStatus(sub.id, 'skipped')}
-                                className="text-sm text-gray-600 hover:text-gray-700"
-                              >
-                                Skip
-                              </button>
-                              <button
-                                onClick={() => handleUpdateSubscriptionStatus(sub.id, 'cancelled')}
-                                className="text-sm text-red-600 hover:text-red-700"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          )}
-                          {sub.status === 'paused' && (
-                            <button
-                              onClick={() => handleUpdateSubscriptionStatus(sub.id, 'active')}
-                              className="text-sm text-green-600 hover:text-green-700"
-                            >
-                              Resume
-                            </button>
-                          )}
-                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             )}

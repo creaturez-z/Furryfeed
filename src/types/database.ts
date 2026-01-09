@@ -105,8 +105,30 @@ export interface Subscription {
   calculated_price: number;
   start_date: string;
   end_date?: string;
+  selected_weekdays?: number[];
+  subtotal_amount?: number;
+  tax_name?: string;
+  tax_percentage?: number;
+  tax_amount?: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface SubscriptionPet {
+  id: string;
+  subscription_id: string;
+  pet_id: string;
+  created_at: string;
+}
+
+export interface SubscriptionItem {
+  id: string;
+  subscription_id: string;
+  subscription_pet_id: string;
+  meal_id: string;
+  quantity: number;
+  price_per_day: number;
+  created_at: string;
 }
 
 export interface Order {

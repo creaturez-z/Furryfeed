@@ -181,18 +181,22 @@ export function Subscribe() {
     }
 
     setCalendarDays(prev => {
-      return prev.map((day, idx) => {
+      console.log('addMealToDay called - dayIndex:', dayIndex, 'mealId:', mealId);
+      const updated = prev.map((day, idx) => {
         if (idx !== dayIndex) return day;
 
         const existingMealIndex = day.meals.findIndex(m => m.mealId === mealId);
-        const newMeals = [...day.meals];
+        const newMeals = day.meals.map(m => ({ ...m }));
 
         if (existingMealIndex >= 0) {
+          console.log('Existing meal found at index:', existingMealIndex, 'current count:', newMeals[existingMealIndex].count);
           newMeals[existingMealIndex] = {
             ...newMeals[existingMealIndex],
             count: newMeals[existingMealIndex].count + 1,
           };
+          console.log('Updated count:', newMeals[existingMealIndex].count);
         } else {
+          console.log('Adding new meal with count 1');
           newMeals.push({
             mealId,
             count: 1,
@@ -203,9 +207,13 @@ export function Subscribe() {
 
         return {
           ...day,
+          date: new Date(day.date),
+          dateString: day.dateString,
           meals: newMeals,
         };
       });
+      console.log('Updated calendar days:', updated);
+      return updated;
     });
   };
 
@@ -216,25 +224,30 @@ export function Subscribe() {
     }
 
     setCalendarDays(prev => {
+      console.log('removeMealFromDay called - dayIndex:', dayIndex, 'mealId:', mealId);
       return prev.map((day, idx) => {
         if (idx !== dayIndex) return day;
 
         const mealIndex = day.meals.findIndex(m => m.mealId === mealId);
         if (mealIndex < 0) return day;
 
-        const newMeals = [...day.meals];
+        const newMeals = day.meals.map(m => ({ ...m }));
 
         if (newMeals[mealIndex].count > 1) {
+          console.log('Decreasing count from:', newMeals[mealIndex].count);
           newMeals[mealIndex] = {
             ...newMeals[mealIndex],
             count: newMeals[mealIndex].count - 1,
           };
         } else {
+          console.log('Removing meal completely');
           newMeals.splice(mealIndex, 1);
         }
 
         return {
           ...day,
+          date: new Date(day.date),
+          dateString: day.dateString,
           meals: newMeals,
         };
       });
@@ -781,12 +794,14 @@ export function Subscribe() {
                             </div>
                             <div className="flex items-center space-x-2">
                               <button
+                                type="button"
                                 onClick={(e) => removeMealFromDay(dayIndex, meal.mealId, e)}
                                 className="flex-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 py-1 px-2 rounded transition-colors"
                               >
                                 − Remove
                               </button>
                               <button
+                                type="button"
                                 onClick={(e) => addMealToDay(dayIndex, meal.mealId, e)}
                                 className="flex-1 text-xs bg-green-50 hover:bg-green-100 text-green-600 py-1 px-2 rounded transition-colors"
                               >
@@ -807,6 +822,7 @@ export function Subscribe() {
                       return (
                         <button
                           key={mealId}
+                          type="button"
                           onClick={(e) => addMealToDay(dayIndex, mealId, e)}
                           className="w-full text-xs bg-orange-50 hover:bg-orange-100 text-orange-700 py-1 px-2 rounded transition-colors"
                         >

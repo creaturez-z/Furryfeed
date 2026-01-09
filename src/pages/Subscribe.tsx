@@ -29,6 +29,7 @@ export function Subscribe() {
   const [subscriptionType, setSubscriptionType] = useState<'daily' | 'weekly'>('daily');
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showWalletWarning, setShowWalletWarning] = useState(false);
@@ -85,20 +86,82 @@ export function Subscribe() {
     );
   };
 
+  const countDeliveryDays = () => {
+    if (!startDate || !endDate) return 1;
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (end < start) return 1;
+
+    if (subscriptionType === 'daily') {
+      // Count total days in range (inclusive)
+      const diffTime = end.getTime() - start.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      return diffDays;
+    } else {
+      // Count occurrences of selected weekdays in range
+      let count = 0;
+      const currentDate = new Date(start);
+
+      while (currentDate <= end) {
+        const dayOfWeek = currentDate.getDay();
+        if (selectedWeekdays.includes(dayOfWeek)) {
+          count++;
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      return count > 0 ? count : 1;
+    }
+  };
+
+  const getWeeksFromStartDate = () => {
+    if (!startDate) return [];
+
+    const start = new Date(startDate);
+    const startDayOfWeek = start.getDay();
+
+    const weeks = [];
+    const weekdays = [
+      { day: 1, name: 'Mon' },
+      { day: 2, name: 'Tue' },
+      { day: 3, name: 'Wed' },
+      { day: 4, name: 'Thu' },
+      { day: 5, name: 'Fri' },
+      { day: 6, name: 'Sat' },
+      { day: 0, name: 'Sun' },
+    ];
+
+    // Reorder weekdays starting from the start date's day
+    for (let i = 0; i < 7; i++) {
+      const dayIndex = (startDayOfWeek + i) % 7;
+      const weekday = weekdays.find(wd => wd.day === dayIndex);
+      if (weekday) {
+        weeks.push(weekday);
+      }
+    }
+
+    return weeks;
+  };
+
   const calculateDetails = () => {
-    if (!meal || !selectedPetId) return { quantity: 0, price: 0 };
+    if (!meal || !selectedPetId) return { quantity: 0, price: 0, dailyPrice: 0, totalDays: 1 };
 
     const pet = pets.find((p) => p.id === selectedPetId);
-    if (!pet) return { quantity: 0, price: 0 };
+    if (!pet) return { quantity: 0, price: 0, dailyPrice: 0, totalDays: 1 };
 
     const weightSlab = findWeightSlab(pet.weight);
-    if (!weightSlab) return { quantity: 0, price: 0 };
+    if (!weightSlab) return { quantity: 0, price: 0, dailyPrice: 0, totalDays: 1 };
 
     const quantity = weightSlab.food_quantity;
     const pricePerUnit = meal.sale_price || meal.base_price_per_10g;
-    const price = (quantity / 10) * pricePerUnit;
+    const dailyPrice = (quantity / 10) * pricePerUnit;
 
-    return { quantity, price };
+    const totalDays = countDeliveryDays();
+    const price = dailyPrice * totalDays;
+
+    return { quantity, price, dailyPrice, totalDays };
   };
 
   useEffect(() => {
@@ -112,7 +175,7 @@ export function Subscribe() {
       }
     };
     loadTaxCalculation();
-  }, [selectedPetId, meal, pets]);
+  }, [selectedPetId, meal, pets, startDate, endDate, subscriptionType, selectedWeekdays]);
 
   const handleWeekdayToggle = (day: number) => {
     setSelectedWeekdays((prev) =>
@@ -137,6 +200,16 @@ export function Subscribe() {
 
     if (subscriptionType === 'weekly' && selectedWeekdays.length === 0) {
       setError('Please select at least one weekday for weekly subscription');
+      return;
+    }
+
+    if (!endDate) {
+      setError('Please select an end date');
+      return;
+    }
+
+    if (new Date(endDate) < new Date(startDate)) {
+      setError('End date must be after start date');
       return;
     }
 
@@ -174,6 +247,8 @@ export function Subscribe() {
         tax_amount: taxCalculation?.taxAmount || 0,
         status: 'active',
         start_date: startDate,
+        end_date: endDate,
+        selected_weekdays: subscriptionType === 'weekly' ? selectedWeekdays : null,
       });
 
       if (subError) throw subError;
@@ -214,19 +289,21 @@ export function Subscribe() {
     return null;
   }
 
-  const { quantity, price } = calculateDetails();
+  const { quantity, price, dailyPrice, totalDays } = calculateDetails();
   const selectedPet = pets.find((p) => p.id === selectedPetId);
   const weightSlab = selectedPet ? findWeightSlab(selectedPet.weight) : null;
 
-  const weekdays = [
-    { day: 1, name: 'Mon' },
-    { day: 2, name: 'Tue' },
-    { day: 3, name: 'Wed' },
-    { day: 4, name: 'Thu' },
-    { day: 5, name: 'Fri' },
-    { day: 6, name: 'Sat' },
-    { day: 0, name: 'Sun' },
-  ];
+  const weekdays = subscriptionType === 'weekly' && startDate
+    ? getWeeksFromStartDate()
+    : [
+        { day: 1, name: 'Mon' },
+        { day: 2, name: 'Tue' },
+        { day: 3, name: 'Wed' },
+        { day: 4, name: 'Thu' },
+        { day: 5, name: 'Fri' },
+        { day: 6, name: 'Sat' },
+        { day: 0, name: 'Sun' },
+      ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -378,18 +455,33 @@ export function Subscribe() {
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Date *
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  min={today}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    min={today}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    End Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate || today}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  />
+                </div>
               </div>
 
               <div className="bg-orange-50 rounded-xl p-6">
@@ -416,8 +508,26 @@ export function Subscribe() {
                       </span>
                     </div>
                     <div className="border-t border-orange-200 pt-4 mt-4 space-y-2">
+                      {subscriptionType === 'weekly' && endDate && (
+                        <div className="flex justify-between items-center mb-2 pb-2 border-b border-orange-200">
+                          <span className="text-gray-700">Number of Deliveries:</span>
+                          <span className="font-medium text-gray-900">{totalDays} days</span>
+                        </div>
+                      )}
+                      {subscriptionType === 'daily' && endDate && (
+                        <div className="flex justify-between items-center mb-2 pb-2 border-b border-orange-200">
+                          <span className="text-gray-700">Number of Days:</span>
+                          <span className="font-medium text-gray-900">{totalDays} days</span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-700">Subtotal:</span>
+                        <span className="text-gray-700">Price per Day:</span>
+                        <span className="font-medium text-gray-900">
+                          ₹{(dailyPrice || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Subtotal ({totalDays} {totalDays === 1 ? 'day' : 'days'}):</span>
                         <span className="font-medium text-gray-900">
                           ₹{((taxCalculation?.subtotal ?? price) || 0).toFixed(2)}
                         </span>
@@ -437,7 +547,7 @@ export function Subscribe() {
                       <div className="border-t border-orange-200 pt-2">
                         <div className="flex justify-between items-center">
                           <span className="text-lg font-semibold text-gray-900">
-                            Daily Total:
+                            Total Amount:
                           </span>
                           <span className="text-3xl font-bold text-orange-500">
                             ₹{((taxCalculation?.total ?? price) || 0).toFixed(2)}

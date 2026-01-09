@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Meal, Pet, WeightSlab, Profile } from '../types/database';
-import { ArrowLeft, Wallet as WalletIcon, AlertCircle, Calendar as CalendarIcon, Copy, Plus, Minus, Check } from 'lucide-react';
+import { ArrowLeft, Wallet as WalletIcon, AlertCircle, Calendar as CalendarIcon, Copy, Check } from 'lucide-react';
 import { calculateSubscriptionTax, TaxCalculation } from '../utils/tax';
 import { ensureWalletExists } from '../utils/wallet';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
@@ -18,8 +18,9 @@ type Wallet = {
 
 type DailyMeal = {
   mealId: string;
-  quantity: number;
-  price: number;
+  count: number;
+  quantityPerUnit: number;
+  pricePerUnit: number;
 };
 
 type CalendarDay = {
@@ -162,7 +163,12 @@ export function Subscribe() {
     setCurrentStep('calendar');
   };
 
-  const addMealToDay = (dayIndex: number, mealId: string) => {
+  const addMealToDay = (dayIndex: number, mealId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     if (!selectedPetId) return;
 
     const pet = pets.find(p => p.id === selectedPetId);
@@ -176,44 +182,40 @@ export function Subscribe() {
 
     setCalendarDays(prev => {
       const updated = [...prev];
-      updated[dayIndex].meals.push({
-        mealId,
-        quantity,
-        price,
-      });
+      const existingMealIndex = updated[dayIndex].meals.findIndex(m => m.mealId === mealId);
+
+      if (existingMealIndex >= 0) {
+        updated[dayIndex].meals[existingMealIndex].count += 1;
+      } else {
+        updated[dayIndex].meals.push({
+          mealId,
+          count: 1,
+          quantityPerUnit: quantity,
+          pricePerUnit: price,
+        });
+      }
+
       return updated;
     });
   };
 
-  const removeMealFromDay = (dayIndex: number, mealIndex: number) => {
-    setCalendarDays(prev => {
-      const updated = [...prev];
-      updated[dayIndex].meals.splice(mealIndex, 1);
-      return updated;
-    });
-  };
-
-  const updateMealQuantity = (dayIndex: number, mealIndex: number, change: number) => {
-    if (!selectedPetId) return;
-
-    const pet = pets.find(p => p.id === selectedPetId);
-    if (!pet) return;
+  const removeMealFromDay = (dayIndex: number, mealId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     setCalendarDays(prev => {
       const updated = [...prev];
-      const meal = updated[dayIndex].meals[mealIndex];
-      const mealData = meals.find(m => m.id === meal.mealId);
-      if (!mealData) return prev;
+      const mealIndex = updated[dayIndex].meals.findIndex(m => m.mealId === mealId);
 
-      const newQuantity = Math.max(10, meal.quantity + change);
-      const pricePerUnit = mealData.sale_price || mealData.base_price_per_10g;
-      const newPrice = (newQuantity / 10) * pricePerUnit;
-
-      updated[dayIndex].meals[mealIndex] = {
-        ...meal,
-        quantity: newQuantity,
-        price: newPrice,
-      };
+      if (mealIndex >= 0) {
+        if (updated[dayIndex].meals[mealIndex].count > 1) {
+          updated[dayIndex].meals[mealIndex].count -= 1;
+        } else {
+          updated[dayIndex].meals.splice(mealIndex, 1);
+        }
+      }
 
       return updated;
     });
@@ -223,7 +225,7 @@ export function Subscribe() {
     let subtotal = 0;
     calendarDays.forEach(day => {
       day.meals.forEach(meal => {
-        subtotal += meal.price;
+        subtotal += meal.pricePerUnit * meal.count;
       });
     });
     return subtotal;
@@ -327,18 +329,20 @@ export function Subscribe() {
 
       for (const day of calendarDays) {
         for (const meal of day.meals) {
-          const { error: dailyItemError } = await supabase
-            .from('subscription_daily_items')
-            .insert({
-              subscription_id: subscription.id,
-              pet_id: selectedPetId,
-              meal_id: meal.mealId,
-              delivery_date: day.dateString,
-              quantity: meal.quantity,
-              price: meal.price,
-            });
+          for (let i = 0; i < meal.count; i++) {
+            const { error: dailyItemError } = await supabase
+              .from('subscription_daily_items')
+              .insert({
+                subscription_id: subscription.id,
+                pet_id: selectedPetId,
+                meal_id: meal.mealId,
+                delivery_date: day.dateString,
+                quantity: meal.quantityPerUnit,
+                price: meal.pricePerUnit,
+              });
 
-          if (dailyItemError) throw dailyItemError;
+            if (dailyItemError) throw dailyItemError;
+          }
         }
       }
 
@@ -391,7 +395,12 @@ export function Subscribe() {
       ...day,
       meals: day.meals.map(meal => {
         const { quantity, price } = getMealPrice(meal.mealId, targetPet);
-        return { mealId: meal.mealId, quantity, price };
+        return {
+          mealId: meal.mealId,
+          count: meal.count,
+          quantityPerUnit: quantity,
+          pricePerUnit: price
+        };
       }),
     }));
 
@@ -712,7 +721,7 @@ export function Subscribe() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             {calendarDays.map((day, dayIndex) => {
-              const dayTotal = day.meals.reduce((sum, meal) => sum + meal.price, 0);
+              const dayTotal = day.meals.reduce((sum, meal) => sum + (meal.pricePerUnit * meal.count), 0);
               return (
                 <div key={dayIndex} className="border-2 border-gray-200 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -731,42 +740,38 @@ export function Subscribe() {
                     {day.meals.length === 0 ? (
                       <p className="text-xs text-gray-400 italic">No meals added</p>
                     ) : (
-                      day.meals.map((meal, mealIndex) => {
+                      day.meals.map((meal) => {
                         const mealData = meals.find(m => m.id === meal.mealId);
+                        const totalQuantity = meal.quantityPerUnit * meal.count;
+                        const totalPrice = meal.pricePerUnit * meal.count;
                         return (
-                          <div key={mealIndex} className="bg-gray-50 rounded-lg p-2">
+                          <div key={meal.mealId} className="bg-gray-50 rounded-lg p-2">
                             <div className="flex items-start justify-between mb-2">
-                              <p className="text-sm font-medium text-gray-900 flex-1">
-                                {mealData?.name}
-                              </p>
-                              <button
-                                onClick={() => removeMealFromDay(dayIndex, mealIndex)}
-                                className="text-red-500 hover:text-red-700 text-xs"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={() => updateMealQuantity(dayIndex, mealIndex, -10)}
-                                  className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300"
-                                >
-                                  <Minus className="w-3 h-3" />
-                                </button>
-                                <span className="text-sm text-gray-700 w-12 text-center">
-                                  {meal.quantity}g
-                                </span>
-                                <button
-                                  onClick={() => updateMealQuantity(dayIndex, mealIndex, 10)}
-                                  className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                </button>
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {mealData?.name}
+                                </p>
+                                <p className="text-xs text-gray-600">
+                                  {meal.count} × {meal.quantityPerUnit}g = {totalQuantity}g
+                                </p>
                               </div>
-                              <span className="text-xs text-gray-600">
-                                ₹{meal.price.toFixed(2)}
+                              <span className="text-xs text-gray-600 ml-2">
+                                ₹{totalPrice.toFixed(2)}
                               </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={(e) => removeMealFromDay(dayIndex, meal.mealId, e)}
+                                className="flex-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 py-1 px-2 rounded transition-colors"
+                              >
+                                − Remove
+                              </button>
+                              <button
+                                onClick={(e) => addMealToDay(dayIndex, meal.mealId, e)}
+                                className="flex-1 text-xs bg-green-50 hover:bg-green-100 text-green-600 py-1 px-2 rounded transition-colors"
+                              >
+                                + Add More
+                              </button>
                             </div>
                           </div>
                         );
@@ -777,10 +782,12 @@ export function Subscribe() {
                   <div className="space-y-1">
                     {selectedMealIds.map(mealId => {
                       const meal = meals.find(m => m.id === mealId);
+                      const alreadyAdded = day.meals.some(m => m.mealId === mealId);
+                      if (alreadyAdded) return null;
                       return (
                         <button
                           key={mealId}
-                          onClick={() => addMealToDay(dayIndex, mealId)}
+                          onClick={(e) => addMealToDay(dayIndex, mealId, e)}
                           className="w-full text-xs bg-orange-50 hover:bg-orange-100 text-orange-700 py-1 px-2 rounded transition-colors"
                         >
                           + Add {meal?.name}

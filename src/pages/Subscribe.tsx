@@ -181,21 +181,31 @@ export function Subscribe() {
     }
 
     setCalendarDays(prev => {
-      const updated = [...prev];
-      const existingMealIndex = updated[dayIndex].meals.findIndex(m => m.mealId === mealId);
+      return prev.map((day, idx) => {
+        if (idx !== dayIndex) return day;
 
-      if (existingMealIndex >= 0) {
-        updated[dayIndex].meals[existingMealIndex].count += 1;
-      } else {
-        updated[dayIndex].meals.push({
-          mealId,
-          count: 1,
-          quantityPerUnit: quantity,
-          pricePerUnit: price,
-        });
-      }
+        const existingMealIndex = day.meals.findIndex(m => m.mealId === mealId);
+        const newMeals = [...day.meals];
 
-      return updated;
+        if (existingMealIndex >= 0) {
+          newMeals[existingMealIndex] = {
+            ...newMeals[existingMealIndex],
+            count: newMeals[existingMealIndex].count + 1,
+          };
+        } else {
+          newMeals.push({
+            mealId,
+            count: 1,
+            quantityPerUnit: quantity,
+            pricePerUnit: price,
+          });
+        }
+
+        return {
+          ...day,
+          meals: newMeals,
+        };
+      });
     });
   };
 
@@ -206,18 +216,28 @@ export function Subscribe() {
     }
 
     setCalendarDays(prev => {
-      const updated = [...prev];
-      const mealIndex = updated[dayIndex].meals.findIndex(m => m.mealId === mealId);
+      return prev.map((day, idx) => {
+        if (idx !== dayIndex) return day;
 
-      if (mealIndex >= 0) {
-        if (updated[dayIndex].meals[mealIndex].count > 1) {
-          updated[dayIndex].meals[mealIndex].count -= 1;
+        const mealIndex = day.meals.findIndex(m => m.mealId === mealId);
+        if (mealIndex < 0) return day;
+
+        const newMeals = [...day.meals];
+
+        if (newMeals[mealIndex].count > 1) {
+          newMeals[mealIndex] = {
+            ...newMeals[mealIndex],
+            count: newMeals[mealIndex].count - 1,
+          };
         } else {
-          updated[dayIndex].meals.splice(mealIndex, 1);
+          newMeals.splice(mealIndex, 1);
         }
-      }
 
-      return updated;
+        return {
+          ...day,
+          meals: newMeals,
+        };
+      });
     });
   };
 

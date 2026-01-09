@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Meal, Banner, BannerSettings } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
 import { ShoppingBag, User, LogOut, Settings } from 'lucide-react';
+import { WhatsAppBubble } from '../components/WhatsAppBubble';
 
 export function Landing() {
   const navigate = useNavigate();
@@ -238,6 +239,7 @@ export function Landing() {
           )}
         </section>
       </main>
+      <WhatsAppBubble pageType="customer" />
     </div>
   );
 }

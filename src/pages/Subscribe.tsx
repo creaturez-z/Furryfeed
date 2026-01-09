@@ -6,6 +6,7 @@ import { Meal, Pet, WeightSlab, Profile } from '../types/database';
 import { ArrowLeft, Wallet as WalletIcon, AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { calculateSubscriptionTax, TaxCalculation } from '../utils/tax';
 import { ensureWalletExists } from '../utils/wallet';
+import { WhatsAppBubble } from '../components/WhatsAppBubble';
 
 type Wallet = {
   id: string;
@@ -746,6 +747,7 @@ export function Subscribe() {
           )}
         </div>
       </div>
+      <WhatsAppBubble pageType="customer" />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Meal } from '../types/database';
 import { ArrowLeft, ShoppingCart } from 'lucide-react';
+import { WhatsAppBubble } from '../components/WhatsAppBubble';
 
 export function MealDetails() {
   const { id } = useParams<{ id: string }>();
@@ -129,6 +130,7 @@ export function MealDetails() {
           </div>
         </div>
       </div>
+      <WhatsAppBubble pageType="customer" />
     </div>
   );
 }

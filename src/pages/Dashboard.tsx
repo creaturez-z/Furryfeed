@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, PawPrint, Package, User, Trash2, Edit, Wallet as Walle
 import { PetForm } from '../components/PetForm';
 import { ProfileForm } from '../components/ProfileForm';
 import { ensureWalletExists } from '../utils/wallet';
+import { WhatsAppBubble } from '../components/WhatsAppBubble';
 
 type Tab = 'subscriptions' | 'pets' | 'profile';
 
@@ -477,6 +478,7 @@ export function Dashboard() {
           </>
         )}
       </div>
+      <WhatsAppBubble pageType="customer" />
     </div>
   );
 }

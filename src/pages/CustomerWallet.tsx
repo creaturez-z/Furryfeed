@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Wallet, WalletTransaction, Profile } from '../types/database';
 import { ensureWalletExists, creditWallet } from '../utils/wallet';
 import { ArrowLeft, Wallet as WalletIcon, Plus, ArrowUpCircle, ArrowDownCircle, Package } from 'lucide-react';
+import { WhatsAppBubble } from '../components/WhatsAppBubble';
 
 export function CustomerWallet() {
   const navigate = useNavigate();
@@ -223,6 +224,7 @@ export function CustomerWallet() {
           )}
         </div>
       </div>
+      <WhatsAppBubble pageType="customer" />
     </div>
   );
 }

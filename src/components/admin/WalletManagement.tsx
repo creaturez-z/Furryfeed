@@ -3,8 +3,10 @@ import { supabase } from '../../lib/supabase';
 import { ProfileWithWallet, WalletTransaction, Wallet } from '../../types/database';
 import { Search, Plus, Minus, History } from 'lucide-react';
 import { creditWallet, debitWallet } from '../../utils/wallet';
+import { useAuth } from '../../contexts/AuthContext';
 
 export function WalletManagement() {
+  const { profile: adminProfile, loading: authLoading } = useAuth();
   const [customers, setCustomers] = useState<ProfileWithWallet[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<ProfileWithWallet | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
@@ -50,6 +52,7 @@ export function WalletManagement() {
 
   const loadTransactions = async (customerId: string) => {
     try {
+      console.log('Loading transactions for customer:', customerId);
       const { data, error } = await supabase
         .from('wallet_transactions')
         .select('*')
@@ -57,75 +60,84 @@ export function WalletManagement() {
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error from Supabase:', error);
+        throw error;
+      }
+      console.log('Loaded transactions:', data);
       setTransactions(data || []);
     } catch (error) {
       console.error('Error loading transactions:', error);
+      setTransactions([]);
     }
   };
 
-  const handleSelectCustomer = async (customer: Profile) => {
-    setSelectedCustomer(customer);
-    await loadTransactions(customer.id);
+  const handleSelectCustomer = async (customer: ProfileWithWallet) => {
+    try {
+      console.log('Selected customer:', customer);
+      setSelectedCustomer(customer);
+      await loadTransactions(customer.id);
+    } catch (error) {
+      console.error('Error selecting customer:', error);
+      alert('Failed to load customer details');
+    }
   };
 
   const handleSubmitTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCustomer) return;
+
+    if (!selectedCustomer) {
+      alert('No customer selected');
+      return;
+    }
+
+    if (!adminProfile) {
+      alert('Admin profile not loaded. Please refresh the page.');
+      return;
+    }
 
     try {
       const amount = parseFloat(formData.amount);
-      const newBalance =
-        formData.type === 'credit'
-          ? selectedCustomer.wallet_balance + amount
-          : selectedCustomer.wallet_balance - amount;
 
-      if (newBalance < 0) {
-        alert('Insufficient balance for debit transaction');
+      if (amount <= 0 || isNaN(amount)) {
+        alert('Amount must be a valid number greater than 0');
         return;
       }
 
-      const { error: walletError } = await supabase
-        .from('profiles')
-        .update({ wallet_balance: newBalance })
-        .eq('id', selectedCustomer.id);
+      let newBalance: number;
 
-      if (walletError) throw walletError;
-
-      const { error: transactionError } = await supabase
-        .from('wallet_transactions')
-        .insert([
-          {
-            customer_id: selectedCustomer.id,
-            type: formData.type,
-            amount: amount,
-            description: formData.reason,
-            balance_after: newBalance,
-          },
-        ]);
-
-      if (transactionError) throw transactionError;
+      if (formData.type === 'credit') {
+        newBalance = await creditWallet(
+          selectedCustomer.id,
+          amount,
+          formData.reason,
+          'admin_adjustment',
+          adminProfile.id
+        );
+      } else {
+        newBalance = await debitWallet(
+          selectedCustomer.id,
+          amount,
+          formData.reason,
+          'admin_adjustment',
+          undefined,
+          adminProfile.id
+        );
+      }
 
       setFormData({ amount: '', type: 'credit', reason: '' });
       setShowTransactionForm(false);
 
-      const { data: updatedCustomer } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', selectedCustomer.id)
-        .single();
-
-      if (updatedCustomer) {
-        setSelectedCustomer(updatedCustomer);
-        setCustomers((prev) =>
-          prev.map((c) => (c.id === updatedCustomer.id ? updatedCustomer : c))
-        );
-      }
+      setSelectedCustomer({ ...selectedCustomer, wallet_balance: newBalance });
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === selectedCustomer.id ? { ...c, wallet_balance: newBalance } : c))
+      );
 
       await loadTransactions(selectedCustomer.id);
+      await loadCustomers();
     } catch (error) {
       console.error('Error processing transaction:', error);
-      alert('Failed to process transaction');
+      alert(error instanceof Error ? error.message : 'Failed to process transaction');
     }
   };
 
@@ -136,10 +148,18 @@ export function WalletManagement() {
       customer.phone.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
+
+  if (!adminProfile) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-12 text-center">
+        <p className="text-red-500">Unable to load admin profile. Please try refreshing the page.</p>
       </div>
     );
   }

@@ -255,11 +255,26 @@ export function HeroBannerManagement() {
                     value={formData.content}
                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                     required
-                    rows={6}
-                    placeholder='<div class="text-center"><h1 class="text-5xl font-bold text-white">Welcome!</h1></div>'
+                    rows={12}
+                    placeholder={`<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    h1 { color: white; font-size: 4rem; animation: fadeIn 2s; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+  <h1>Welcome to PetMeals!</h1>
+  <script>
+    console.log('Banner loaded!');
+  </script>
+</body>
+</html>`}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Custom HTML content (Tailwind CSS classes supported)</p>
+                  <p className="text-xs text-gray-500 mt-1">Full HTML document with CSS and JavaScript support. Create complete interactive banners!</p>
                 </>
               )}
             </div>

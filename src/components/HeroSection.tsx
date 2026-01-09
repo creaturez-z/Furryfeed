@@ -90,9 +90,11 @@ export default function HeroSection() {
         )}
 
         {currentBanner.type === 'html' && (
-          <div
-            className="w-full h-full flex items-center justify-center p-4 md:p-8"
-            dangerouslySetInnerHTML={{ __html: currentBanner.content }}
+          <iframe
+            srcDoc={currentBanner.content}
+            className="w-full h-full border-0"
+            title={currentBanner.title}
+            sandbox="allow-scripts allow-same-origin"
           />
         )}
 

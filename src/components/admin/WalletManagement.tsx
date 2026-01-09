@@ -331,9 +331,9 @@ export function WalletManagement() {
                             {transaction.amount.toFixed(2)}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-700">{transaction.description}</p>
+                        <p className="text-sm text-gray-700">{transaction.reason}</p>
                         <p className="text-xs text-gray-500 mt-1">
-                          Balance: ₹{transaction.balance_after.toFixed(2)}
+                          {transaction.reference_type.replace('_', ' ')}
                         </p>
                       </div>
                       <div className="text-right">

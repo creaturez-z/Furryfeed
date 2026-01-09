@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, LogOut, LayoutDashboard, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet, Users, Package, BarChart3, Receipt, MessageCircle } from 'lucide-react';
+import { ArrowLeft, LogOut, LayoutDashboard, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet, Users, Package, BarChart3, Receipt, MessageCircle, Monitor } from 'lucide-react';
 import { MealManagement } from '../components/admin/MealManagement';
 import { KitchenManagement } from '../components/admin/KitchenManagement';
 import { StaffManagement } from '../components/admin/StaffManagement';
@@ -9,13 +9,14 @@ import { DeliveryManagement } from '../components/admin/DeliveryManagement';
 import { WeightSlabManagement } from '../components/admin/WeightSlabManagement';
 import { TaxConfigurationManagement } from '../components/admin/TaxConfigurationManagement';
 import { BannerManagement } from '../components/admin/BannerManagement';
+import { HeroBannerManagement } from '../components/admin/HeroBannerManagement';
 import { WalletManagement } from '../components/admin/WalletManagement';
 import { CustomersManagement } from '../components/admin/CustomersManagement';
 import { SubscriptionsManagement } from '../components/admin/SubscriptionsManagement';
 import { ReportsManagement } from '../components/admin/ReportsManagement';
 import { WhatsAppManagement } from '../components/admin/WhatsAppManagement';
 
-type AdminTab = 'dashboard' | 'meals' | 'weight-slabs' | 'tax-config' | 'banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp';
+type AdminTab = 'dashboard' | 'meals' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp';
 
 export function AdminPanel() {
   const navigate = useNavigate();
@@ -109,6 +110,17 @@ export function AdminPanel() {
             >
               <Image className="w-5 h-5" />
               <span>Banners</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('hero-banners')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'hero-banners'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Monitor className="w-5 h-5" />
+              <span>Hero Banners</span>
             </button>
             <button
               onClick={() => setActiveTab('kitchens')}
@@ -211,6 +223,7 @@ export function AdminPanel() {
         {activeTab === 'weight-slabs' && <WeightSlabManagement />}
         {activeTab === 'tax-config' && <TaxConfigurationManagement />}
         {activeTab === 'banners' && <BannerManagement />}
+        {activeTab === 'hero-banners' && <HeroBannerManagement />}
         {activeTab === 'kitchens' && <KitchenManagement />}
         {activeTab === 'staff' && <StaffManagement />}
         {activeTab === 'delivery' && <DeliveryManagement />}

@@ -5,6 +5,7 @@ import { Meal, Banner, BannerSettings } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
 import { ShoppingBag, User, LogOut, Settings } from 'lucide-react';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
+import HeroSection from '../components/HeroSection';
 
 export function Landing() {
   const navigate = useNavigate();
@@ -130,6 +131,8 @@ export function Landing() {
           </div>
         </div>
       </nav>
+
+      <HeroSection />
 
       <header className="bg-gradient-to-r from-orange-500 to-amber-500 text-white py-16 px-4">
         <div className="max-w-7xl mx-auto text-center">

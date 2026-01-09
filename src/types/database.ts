@@ -220,3 +220,17 @@ export interface Wallet {
   created_at: string;
   updated_at: string;
 }
+
+export interface WhatsAppConfig {
+  id: string;
+  enabled: boolean;
+  phone_number: string;
+  display_text: string;
+  default_message: string;
+  position: 'bottom-right' | 'bottom-left';
+  show_on_customer: boolean;
+  show_on_kitchen: boolean;
+  icon_url?: string;
+  created_at: string;
+  updated_at: string;
+}

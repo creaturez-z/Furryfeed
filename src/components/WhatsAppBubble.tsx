@@ -10,6 +10,7 @@ interface WhatsAppConfig {
   position: 'bottom-right' | 'bottom-left';
   show_on_customer: boolean;
   show_on_kitchen: boolean;
+  icon_url: string | null;
 }
 
 interface WhatsAppBubbleProps {
@@ -105,7 +106,15 @@ export function WhatsAppBubble({ pageType }: WhatsAppBubbleProps) {
             className="group relative bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all transform hover:scale-110 border-2 border-green-400"
             aria-label="Open WhatsApp chat"
           >
-            <MessageCircle className="w-6 h-6" />
+            {config.icon_url ? (
+              <img
+                src={config.icon_url}
+                alt="Chat icon"
+                className="w-6 h-6 object-contain"
+              />
+            ) : (
+              <MessageCircle className="w-6 h-6" />
+            )}
 
             {config.display_text && (
               <span className="hidden sm:block absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-white text-gray-800 px-3 py-2 rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-200">

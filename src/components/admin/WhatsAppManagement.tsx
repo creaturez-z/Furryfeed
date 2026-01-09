@@ -11,6 +11,7 @@ interface WhatsAppConfig {
   position: 'bottom-right' | 'bottom-left';
   show_on_customer: boolean;
   show_on_kitchen: boolean;
+  icon_url: string;
 }
 
 export function WhatsAppManagement() {
@@ -46,6 +47,7 @@ export function WhatsAppManagement() {
           position: 'bottom-right',
           show_on_customer: true,
           show_on_kitchen: true,
+          icon_url: '',
         });
       }
     } catch (err) {
@@ -90,6 +92,7 @@ export function WhatsAppManagement() {
             position: config.position,
             show_on_customer: config.show_on_customer,
             show_on_kitchen: config.show_on_kitchen,
+            icon_url: config.icon_url || null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', config.id);
@@ -106,6 +109,7 @@ export function WhatsAppManagement() {
             position: config.position,
             show_on_customer: config.show_on_customer,
             show_on_kitchen: config.show_on_kitchen,
+            icon_url: config.icon_url || null,
           })
           .select()
           .single();
@@ -182,6 +186,38 @@ export function WhatsAppManagement() {
           <p className="mt-1 text-xs text-gray-500">
             Include country code (e.g., +91 for India, +1 for USA)
           </p>
+        </div>
+
+        <div>
+          <label htmlFor="iconUrl" className="block text-sm font-medium text-gray-700 mb-2">
+            Custom Icon URL (Optional)
+          </label>
+          <input
+            type="text"
+            id="iconUrl"
+            value={config.icon_url}
+            onChange={(e) => setConfig({ ...config, icon_url: e.target.value })}
+            placeholder="https://example.com/icon.png"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            Leave empty to use the default WhatsApp icon. Recommended size: 24x24px or larger.
+          </p>
+          {config.icon_url && (
+            <div className="mt-3 flex items-center space-x-3">
+              <span className="text-sm text-gray-600">Preview:</span>
+              <div className="bg-green-500 rounded-full p-3">
+                <img
+                  src={config.icon_url}
+                  alt="Custom icon preview"
+                  className="w-6 h-6 object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div>

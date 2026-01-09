@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, LogOut, LayoutDashboard, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet, Users, Package, BarChart3, Receipt } from 'lucide-react';
+import { ArrowLeft, LogOut, LayoutDashboard, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet, Users, Package, BarChart3, Receipt, MessageCircle } from 'lucide-react';
 import { MealManagement } from '../components/admin/MealManagement';
 import { KitchenManagement } from '../components/admin/KitchenManagement';
 import { StaffManagement } from '../components/admin/StaffManagement';
@@ -13,8 +13,9 @@ import { WalletManagement } from '../components/admin/WalletManagement';
 import { CustomersManagement } from '../components/admin/CustomersManagement';
 import { SubscriptionsManagement } from '../components/admin/SubscriptionsManagement';
 import { ReportsManagement } from '../components/admin/ReportsManagement';
+import { WhatsAppManagement } from '../components/admin/WhatsAppManagement';
 
-type AdminTab = 'dashboard' | 'meals' | 'weight-slabs' | 'tax-config' | 'banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports';
+type AdminTab = 'dashboard' | 'meals' | 'weight-slabs' | 'tax-config' | 'banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp';
 
 export function AdminPanel() {
   const navigate = useNavigate();
@@ -186,6 +187,17 @@ export function AdminPanel() {
               <BarChart3 className="w-5 h-5" />
               <span>Reports</span>
             </button>
+            <button
+              onClick={() => setActiveTab('whatsapp')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'whatsapp'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span>WhatsApp</span>
+            </button>
           </div>
         </div>
 
@@ -206,6 +218,7 @@ export function AdminPanel() {
         {activeTab === 'customers' && <CustomersManagement />}
         {activeTab === 'subscriptions' && <SubscriptionsManagement />}
         {activeTab === 'reports' && <ReportsManagement />}
+        {activeTab === 'whatsapp' && <WhatsAppManagement />}
       </div>
     </div>
   );

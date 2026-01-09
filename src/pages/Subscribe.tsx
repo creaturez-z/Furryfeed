@@ -79,8 +79,9 @@ export function Subscribe() {
   };
 
   const findWeightSlab = (petWeight: number) => {
+    const petWeightInKg = petWeight / 1000;
     return weightSlabs.find(
-      (slab) => petWeight >= slab.min_weight && petWeight <= slab.max_weight
+      (slab) => petWeightInKg >= slab.min_weight && petWeightInKg <= slab.max_weight
     );
   };
 
@@ -317,7 +318,7 @@ export function Subscribe() {
                 >
                   {pets.map((pet) => (
                     <option key={pet.id} value={pet.id}>
-                      {pet.name} - {pet.breed} ({pet.weight}kg)
+                      {pet.name} - {pet.breed} ({(pet.weight / 1000).toFixed(2)}kg)
                     </option>
                   ))}
                 </select>
@@ -396,7 +397,7 @@ export function Subscribe() {
                   <>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-gray-700">Pet Weight:</span>
-                      <span className="font-medium text-gray-900">{selectedPet.weight}kg</span>
+                      <span className="font-medium text-gray-900">{(selectedPet.weight / 1000).toFixed(2)}kg</span>
                     </div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-gray-700">Weight Range:</span>

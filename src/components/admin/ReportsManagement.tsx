@@ -269,7 +269,7 @@ export function ReportsManagement() {
         );
 
         uniquePets.forEach((pet) => {
-          csvContent += `${pet.name},${pet.breed},${pet.weight}kg,${pet.customer},${petOrders[pet.name] || 0}\n`;
+          csvContent += `${pet.name},${pet.breed},${(pet.weight / 1000).toFixed(2)}kg,${pet.customer},${petOrders[pet.name] || 0}\n`;
         });
         filename = `pets_report_${startDate}_to_${endDate}.csv`;
         break;

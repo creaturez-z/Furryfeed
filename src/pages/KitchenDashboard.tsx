@@ -278,7 +278,7 @@ export function KitchenDashboard() {
                             </p>
                             <p>
                               <span className="font-medium">Pet:</span> {order.pet?.name} (
-                              {order.pet?.weight}kg)
+                              {order.pet?.weight ? (order.pet.weight / 1000).toFixed(2) : 0}kg)
                             </p>
                             <p>
                               <span className="font-medium">Quantity:</span> {order.quantity}g

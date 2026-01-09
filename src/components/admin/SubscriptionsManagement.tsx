@@ -273,7 +273,7 @@ export function SubscriptionsManagement() {
                     <p className="text-sm text-gray-600 mb-1">Pet</p>
                     <p className="font-medium text-gray-900">{selectedSubscription.pet?.name}</p>
                     <p className="text-sm text-gray-600">
-                      {selectedSubscription.pet?.breed} • {selectedSubscription.pet?.weight}kg
+                      {selectedSubscription.pet?.breed} • {selectedSubscription.pet?.weight ? (selectedSubscription.pet.weight / 1000).toFixed(2) : 0}kg
                     </p>
                     <p className="text-sm text-gray-600">{selectedSubscription.pet?.age} years old</p>
                   </div>

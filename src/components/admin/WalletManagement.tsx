@@ -20,28 +20,61 @@ export function WalletManagement() {
   });
 
   useEffect(() => {
+    // Test wallet access
+    const testWalletAccess = async () => {
+      const { data, error } = await supabase
+        .from('wallets')
+        .select('*')
+        .limit(1);
+      console.log('Wallet access test:', { data, error });
+    };
+    testWalletAccess();
+
     loadCustomers();
   }, []);
 
   const loadCustomers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // First get all customer profiles
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          wallets(balance)
-        `)
+        .select('*')
         .eq('role', 'customer')
         .order('name');
 
-      if (error) throw error;
+      if (profilesError) throw profilesError;
 
-      const customersWithWallet: ProfileWithWallet[] = (data || []).map((profile: any) => ({
-        ...profile,
-        wallet_balance: profile.wallets?.[0]?.balance || 0,
-      }));
+      console.log('Profiles data:', profilesData);
 
+      // Then get all wallets
+      const { data: walletsData, error: walletsError } = await supabase
+        .from('wallets')
+        .select('customer_id, balance');
+
+      if (walletsError) {
+        console.error('Error loading wallets:', walletsError);
+      }
+
+      console.log('Wallets data:', walletsData);
+
+      // Create a map of customer_id to balance
+      const walletMap = new Map<string, number>();
+      (walletsData || []).forEach((wallet: any) => {
+        walletMap.set(wallet.customer_id, parseFloat(wallet.balance));
+      });
+
+      // Combine profiles with wallet balances
+      const customersWithWallet: ProfileWithWallet[] = (profilesData || []).map((profile: any) => {
+        const balance = walletMap.get(profile.id) || 0;
+        console.log(`Customer ${profile.name} (${profile.id}): balance = ${balance}`);
+        return {
+          ...profile,
+          wallet_balance: balance,
+        };
+      });
+
+      console.log('Final customers with wallet:', customersWithWallet);
       setCustomers(customersWithWallet);
     } catch (error) {
       console.error('Error loading customers:', error);
@@ -75,6 +108,7 @@ export function WalletManagement() {
   const handleSelectCustomer = async (customer: ProfileWithWallet) => {
     try {
       console.log('Selected customer:', customer);
+      console.log('Selected customer wallet_balance:', customer.wallet_balance);
       setSelectedCustomer(customer);
       await loadTransactions(customer.id);
     } catch (error) {

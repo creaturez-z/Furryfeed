@@ -28,7 +28,11 @@ export interface Pet {
   breed: string;
   age: number;
   weight: number;
+  weight_in_kg?: number;
+  image_url?: string;
   medical_condition?: string;
+  likes?: string;
+  dislikes?: string;
   special_instructions?: string;
   created_at: string;
   updated_at: string;

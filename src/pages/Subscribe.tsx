@@ -93,8 +93,8 @@ export function Subscribe() {
     }
   };
 
-  const findWeightSlab = (petWeight: number, mealId: string) => {
-    const petWeightInKg = petWeight / 1000;
+  const findWeightSlab = (pet: Pet, mealId: string) => {
+    const petWeightInKg = pet.weight_in_kg || pet.weight / 1000;
     return weightSlabs.find(
       (slab) =>
         slab.meal_id === mealId &&
@@ -170,12 +170,12 @@ export function Subscribe() {
         const meal = meals.find((m) => m.id === mealId);
         if (!meal) return;
 
-        const weightSlab = findWeightSlab(pet.weight, mealId);
+        const weightSlab = findWeightSlab(pet, mealId);
         if (!weightSlab) {
           calculations.push({
             petId: pet.id,
             petName: pet.name,
-            petWeight: pet.weight,
+            petWeight: pet.weight_in_kg ? pet.weight_in_kg * 1000 : pet.weight,
             mealId: meal.id,
             mealName: meal.name,
             quantity: 0,
@@ -192,7 +192,7 @@ export function Subscribe() {
         calculations.push({
           petId: pet.id,
           petName: pet.name,
-          petWeight: pet.weight,
+          petWeight: pet.weight_in_kg ? pet.weight_in_kg * 1000 : pet.weight,
           mealId: meal.id,
           mealName: meal.name,
           quantity,
@@ -474,32 +474,42 @@ export function Subscribe() {
                   Select Pets * (You can select multiple)
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {pets.map((pet) => (
-                    <div
-                      key={pet.id}
-                      onClick={() => togglePetSelection(pet.id)}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        selectedPetIds.includes(pet.id)
-                          ? 'border-orange-500 bg-orange-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedPetIds.includes(pet.id)}
-                          onChange={() => {}}
-                          className="w-5 h-5 text-orange-500 rounded focus:ring-orange-500"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900">{pet.name}</p>
-                          <p className="text-sm text-gray-600">
-                            {pet.breed} • {(pet.weight / 1000).toFixed(2)}kg • {pet.age} years
-                          </p>
+                  {pets.map((pet) => {
+                    const displayWeight = pet.weight_in_kg || pet.weight / 1000;
+                    return (
+                      <div
+                        key={pet.id}
+                        onClick={() => togglePetSelection(pet.id)}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          selectedPetIds.includes(pet.id)
+                            ? 'border-orange-500 bg-orange-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedPetIds.includes(pet.id)}
+                            onChange={() => {}}
+                            className="w-5 h-5 text-orange-500 rounded focus:ring-orange-500"
+                          />
+                          {pet.image_url && (
+                            <img
+                              src={pet.image_url}
+                              alt={pet.name}
+                              className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                            />
+                          )}
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{pet.name}</p>
+                            <p className="text-sm text-gray-600">
+                              {pet.breed} • {displayWeight.toFixed(2)}kg • {pet.age} years
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

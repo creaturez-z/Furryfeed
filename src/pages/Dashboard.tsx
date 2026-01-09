@@ -245,12 +245,22 @@ export function Dashboard() {
                                     const petItems = sub.subscription_items?.filter(
                                       (item) => item.subscription_pet_id === subPet.id
                                     );
+                                    const petWeight = subPet.pet?.weight_in_kg || (subPet.pet?.weight ? subPet.pet.weight / 1000 : 0);
 
                                     return (
                                       <div key={subPet.id} className="mb-4 pb-4 border-b border-gray-100 last:border-0">
-                                        <h4 className="font-medium text-gray-900 mb-2">
-                                          {subPet.pet?.name} ({(subPet.pet?.weight! / 1000).toFixed(2)}kg)
-                                        </h4>
+                                        <div className="flex items-center space-x-2 mb-2">
+                                          {subPet.pet?.image_url && (
+                                            <img
+                                              src={subPet.pet.image_url}
+                                              alt={subPet.pet.name}
+                                              className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                                            />
+                                          )}
+                                          <h4 className="font-medium text-gray-900">
+                                            {subPet.pet?.name} ({petWeight.toFixed(2)}kg)
+                                          </h4>
+                                        </div>
                                         <div className="space-y-1 ml-4">
                                           {petItems?.map((item) => (
                                             <div key={item.id} className="flex items-center justify-between text-sm">
@@ -386,40 +396,76 @@ export function Dashboard() {
                   )
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {pets.map((pet) => (
-                      <div key={pet.id} className="bg-white rounded-xl shadow-md p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h3 className="text-xl font-bold text-gray-900">{pet.name}</h3>
-                            <p className="text-sm text-gray-600">{pet.breed}</p>
+                    {pets.map((pet) => {
+                      const displayWeight = pet.weight_in_kg || pet.weight / 1000;
+                      return (
+                        <div key={pet.id} className="bg-white rounded-xl shadow-md p-6">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-start space-x-3">
+                              {pet.image_url ? (
+                                <img
+                                  src={pet.image_url}
+                                  alt={pet.name}
+                                  className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                                />
+                              ) : (
+                                <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center">
+                                  <PawPrint className="w-8 h-8 text-orange-500" />
+                                </div>
+                              )}
+                              <div>
+                                <h3 className="text-xl font-bold text-gray-900">{pet.name}</h3>
+                                <p className="text-sm text-gray-600">{pet.breed}</p>
+                              </div>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => setEditingPet(pet)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePet(pet.id)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => setEditingPet(pet)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeletePet(pet.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                          <div className="space-y-2 text-sm">
+                            <div className="grid grid-cols-2 gap-2">
+                              <p className="text-gray-600">Age: <span className="font-medium text-gray-900">{pet.age} years</span></p>
+                              <p className="text-gray-600">Weight: <span className="font-medium text-gray-900">{displayWeight.toFixed(2)} kg</span></p>
+                            </div>
+                            {pet.medical_condition && (
+                              <div className="pt-2 border-t border-gray-100">
+                                <p className="text-gray-700 font-medium text-xs mb-1">Medical Conditions:</p>
+                                <p className="text-gray-600">{pet.medical_condition}</p>
+                              </div>
+                            )}
+                            {pet.likes && (
+                              <div className="pt-2 border-t border-gray-100">
+                                <p className="text-gray-700 font-medium text-xs mb-1">Likes:</p>
+                                <p className="text-gray-600">{pet.likes}</p>
+                              </div>
+                            )}
+                            {pet.dislikes && (
+                              <div className="pt-2 border-t border-gray-100">
+                                <p className="text-gray-700 font-medium text-xs mb-1">Dislikes:</p>
+                                <p className="text-gray-600">{pet.dislikes}</p>
+                              </div>
+                            )}
+                            {pet.special_instructions && (
+                              <div className="pt-2 border-t border-gray-100">
+                                <p className="text-gray-700 font-medium text-xs mb-1">Special Instructions:</p>
+                                <p className="text-gray-600">{pet.special_instructions}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <div className="space-y-2 text-sm text-gray-600">
-                          <p>Age: {pet.age} years</p>
-                          <p>Weight: {pet.weight}g</p>
-                          {pet.medical_condition && (
-                            <p>Medical: {pet.medical_condition}</p>
-                          )}
-                          {pet.special_instructions && (
-                            <p>Notes: {pet.special_instructions}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

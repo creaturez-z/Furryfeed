@@ -9,6 +9,13 @@ interface HeroBanner {
   content: string;
   is_active: boolean;
   display_order: number;
+  auto_play: boolean;
+  slide_duration: number;
+  enable_animation: boolean;
+  show_controls: boolean;
+  show_indicators: boolean;
+  animation_type: 'slide' | 'fade' | 'zoom' | 'none';
+  slide_direction: 'left' | 'right' | 'top' | 'bottom';
   created_at: string;
   updated_at: string;
 }
@@ -24,6 +31,13 @@ export function HeroBannerManagement() {
     content: '',
     display_order: 0,
     is_active: true,
+    auto_play: true,
+    slide_duration: 5000,
+    enable_animation: true,
+    show_controls: true,
+    show_indicators: true,
+    animation_type: 'slide' as 'slide' | 'fade' | 'zoom' | 'none',
+    slide_direction: 'left' as 'left' | 'right' | 'top' | 'bottom',
   });
 
   useEffect(() => {
@@ -79,6 +93,13 @@ export function HeroBannerManagement() {
       content: banner.content,
       display_order: banner.display_order,
       is_active: banner.is_active,
+      auto_play: banner.auto_play ?? true,
+      slide_duration: banner.slide_duration ?? 5000,
+      enable_animation: banner.enable_animation ?? true,
+      show_controls: banner.show_controls ?? true,
+      show_indicators: banner.show_indicators ?? true,
+      animation_type: banner.animation_type ?? 'slide',
+      slide_direction: banner.slide_direction ?? 'left',
     });
     setShowForm(true);
   };
@@ -146,6 +167,13 @@ export function HeroBannerManagement() {
       content: '',
       display_order: banners.length,
       is_active: true,
+      auto_play: true,
+      slide_duration: 5000,
+      enable_animation: true,
+      show_controls: true,
+      show_indicators: true,
+      animation_type: 'slide',
+      slide_direction: 'left',
     });
     setEditingBanner(null);
     setShowForm(false);
@@ -300,6 +328,110 @@ export function HeroBannerManagement() {
                   <option value="active">Active (Visible on website)</option>
                   <option value="inactive">Disabled (Hidden)</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h5 className="text-sm font-bold text-gray-900 mb-3">Slider Animation Settings</h5>
+              <p className="text-xs text-gray-600 mb-4">Control how this banner behaves when multiple banners are active</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Animation Type *</label>
+                  <select
+                    value={formData.animation_type}
+                    onChange={(e) => setFormData({ ...formData, animation_type: e.target.value as 'slide' | 'fade' | 'zoom' | 'none' })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  >
+                    <option value="slide">Slide - Banner slides in</option>
+                    <option value="fade">Fade - Banner fades in/out</option>
+                    <option value="zoom">Zoom - Banner zooms in</option>
+                    <option value="none">None - No animation</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Visual effect for banner transitions</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Slide Direction</label>
+                  <select
+                    value={formData.slide_direction}
+                    onChange={(e) => setFormData({ ...formData, slide_direction: e.target.value as 'left' | 'right' | 'top' | 'bottom' })}
+                    disabled={formData.animation_type !== 'slide'}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="left">Left → Right</option>
+                    <option value="right">Right → Left</option>
+                    <option value="top">Top → Bottom</option>
+                    <option value="bottom">Bottom → Top</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Direction for slide animation only</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Auto Play</label>
+                  <select
+                    value={formData.auto_play ? 'enabled' : 'disabled'}
+                    onChange={(e) => setFormData({ ...formData, auto_play: e.target.value === 'enabled' })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  >
+                    <option value="enabled">Enabled (Auto-slide)</option>
+                    <option value="disabled">Disabled (Manual only)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Automatically transition between slides</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Slide Interval (seconds)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    step="0.5"
+                    value={formData.slide_duration / 1000}
+                    onChange={(e) => setFormData({ ...formData, slide_duration: parseFloat(e.target.value) * 1000 })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Time each slide displays (1-30 seconds)</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Animation Speed</label>
+                  <select
+                    value={formData.enable_animation ? 'enabled' : 'disabled'}
+                    onChange={(e) => setFormData({ ...formData, enable_animation: e.target.value === 'enabled' })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  >
+                    <option value="enabled">Enabled (500ms transition)</option>
+                    <option value="disabled">Disabled (Instant)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Enable smooth transitions</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Show Navigation Controls</label>
+                  <select
+                    value={formData.show_controls ? 'show' : 'hide'}
+                    onChange={(e) => setFormData({ ...formData, show_controls: e.target.value === 'show' })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  >
+                    <option value="show">Show (Arrows visible)</option>
+                    <option value="hide">Hide (No arrows)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Left/Right navigation arrows</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Show Indicators</label>
+                  <select
+                    value={formData.show_indicators ? 'show' : 'hide'}
+                    onChange={(e) => setFormData({ ...formData, show_indicators: e.target.value === 'show' })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  >
+                    <option value="show">Show (Dots visible)</option>
+                    <option value="hide">Hide (No dots)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Bottom slide indicator dots</p>
+                </div>
               </div>
             </div>
 

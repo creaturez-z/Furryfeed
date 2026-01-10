@@ -209,16 +209,18 @@ export function Dashboard() {
           <>
             {activeTab === 'subscriptions' && (
               <div className="space-y-4">
+                <button
+                  onClick={() => navigate('/subscribe')}
+                  className="w-full bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Create Subscription</span>
+                </button>
+
                 {subscriptions.length === 0 ? (
                   <div className="bg-white rounded-xl shadow-md p-12 text-center">
                     <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500 text-lg mb-4">No subscriptions yet</p>
-                    <button
-                      onClick={() => navigate('/')}
-                      className="bg-orange-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors"
-                    >
-                      Browse Meals
-                    </button>
+                    <p className="text-gray-500 text-lg">No subscriptions yet</p>
                   </div>
                 ) : (
                   subscriptions.map((sub) => {

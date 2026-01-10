@@ -3,10 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Meal, Pet, WeightSlab, Profile } from '../types/database';
-import { ArrowLeft, Wallet as WalletIcon, AlertCircle, Calendar as CalendarIcon, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Wallet as WalletIcon, AlertCircle, Calendar as CalendarIcon, Copy, Check, Plus } from 'lucide-react';
 import { calculateSubscriptionTax, TaxCalculation } from '../utils/tax';
 import { ensureWalletExists } from '../utils/wallet';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
+import { PetForm } from '../components/PetForm';
 
 type Wallet = {
   id: string;
@@ -47,6 +48,9 @@ export function Subscribe() {
   const [endDate, setEndDate] = useState('');
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
   const [currentStep, setCurrentStep] = useState<'selection' | 'calendar'>('selection');
+  const [showPetForm, setShowPetForm] = useState(false);
+  const [showWalletPopup, setShowWalletPopup] = useState(false);
+  const [showAddMealModal, setShowAddMealModal] = useState(false);
 
   const [petsWithSubscriptions, setPetsWithSubscriptions] = useState<string[]>([]);
   const [showReplicateModal, setShowReplicateModal] = useState(false);
@@ -146,6 +150,11 @@ export function Subscribe() {
       return;
     }
 
+    if (wallet && wallet.balance <= 0) {
+      setShowWalletPopup(true);
+      return;
+    }
+
     const days: CalendarDay[] = [];
     const currentDate = new Date(start);
 
@@ -181,7 +190,6 @@ export function Subscribe() {
     }
 
     setCalendarDays(prev => {
-      console.log('addMealToDay called - dayIndex:', dayIndex, 'mealId:', mealId);
       const updated = prev.map((day, idx) => {
         if (idx !== dayIndex) return day;
 
@@ -189,14 +197,11 @@ export function Subscribe() {
         const newMeals = day.meals.map(m => ({ ...m }));
 
         if (existingMealIndex >= 0) {
-          console.log('Existing meal found at index:', existingMealIndex, 'current count:', newMeals[existingMealIndex].count);
           newMeals[existingMealIndex] = {
             ...newMeals[existingMealIndex],
             count: newMeals[existingMealIndex].count + 1,
           };
-          console.log('Updated count:', newMeals[existingMealIndex].count);
         } else {
-          console.log('Adding new meal with count 1');
           newMeals.push({
             mealId,
             count: 1,
@@ -212,7 +217,6 @@ export function Subscribe() {
           meals: newMeals,
         };
       });
-      console.log('Updated calendar days:', updated);
       return updated;
     });
   };
@@ -224,7 +228,6 @@ export function Subscribe() {
     }
 
     setCalendarDays(prev => {
-      console.log('removeMealFromDay called - dayIndex:', dayIndex, 'mealId:', mealId);
       return prev.map((day, idx) => {
         if (idx !== dayIndex) return day;
 
@@ -234,13 +237,11 @@ export function Subscribe() {
         const newMeals = day.meals.map(m => ({ ...m }));
 
         if (newMeals[mealIndex].count > 1) {
-          console.log('Decreasing count from:', newMeals[mealIndex].count);
           newMeals[mealIndex] = {
             ...newMeals[mealIndex],
             count: newMeals[mealIndex].count - 1,
           };
         } else {
-          console.log('Removing meal completely');
           newMeals.splice(mealIndex, 1);
         }
 
@@ -575,6 +576,29 @@ export function Subscribe() {
                       );
                     })}
                   </div>
+
+                  {!showPetForm && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPetForm(true)}
+                      className="mt-3 w-full bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2 border border-gray-300"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add New Pet</span>
+                    </button>
+                  )}
+
+                  {showPetForm && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <PetForm
+                        onSuccess={async () => {
+                          setShowPetForm(false);
+                          await loadPets();
+                        }}
+                        onCancel={() => setShowPetForm(false)}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -674,6 +698,41 @@ export function Subscribe() {
             )}
           </div>
         </div>
+
+        {showWalletPopup && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
+                  <WalletIcon className="w-8 h-8 text-orange-500" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
+                Insufficient Balance
+              </h2>
+              <p className="text-gray-600 text-center mb-6">
+                Your wallet balance is low or zero. Please recharge your wallet to continue with the subscription.
+              </p>
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => navigate('/wallet')}
+                  className="w-full bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                >
+                  Recharge Wallet
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowWalletPopup(false)}
+                  className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <WhatsAppBubble pageType="customer" />
       </div>
     );
@@ -738,7 +797,17 @@ export function Subscribe() {
           )}
 
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Available Meals:</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-gray-700">Available Meals:</h3>
+              <button
+                type="button"
+                onClick={() => setShowAddMealModal(true)}
+                className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Meal</span>
+              </button>
+            </div>
             <div className="flex flex-wrap gap-2">
               {selectedMealIds.map(mealId => {
                 const meal = meals.find(m => m.id === mealId);
@@ -924,6 +993,73 @@ export function Subscribe() {
                 className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
               >
                 Skip & Go to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddMealModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Add More Meals</h2>
+              <button
+                type="button"
+                onClick={() => setShowAddMealModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="text-2xl">&times;</span>
+              </button>
+            </div>
+
+            <div className="p-6">
+              {meals.filter(meal => !selectedMealIds.includes(meal.id)).length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">All available meals are already selected.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {meals
+                    .filter(meal => !selectedMealIds.includes(meal.id))
+                    .map((meal) => (
+                      <div
+                        key={meal.id}
+                        onClick={() => {
+                          setSelectedMealIds(prev => [...prev, meal.id]);
+                          setShowAddMealModal(false);
+                        }}
+                        className="border-2 border-gray-200 rounded-lg cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-all overflow-hidden"
+                      >
+                        <div className="p-4">
+                          <div className="flex items-start space-x-3">
+                            <img
+                              src={meal.image_url}
+                              alt={meal.name}
+                              className="w-20 h-20 object-cover rounded-lg"
+                            />
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900 text-sm">{meal.name}</p>
+                              <p className="text-xs text-gray-600 line-clamp-2">{meal.description}</p>
+                              <p className="text-sm text-orange-600 font-medium mt-1">
+                                ₹{(meal.sale_price || meal.base_price_per_10g).toFixed(2)}/10g
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setShowAddMealModal(false)}
+                className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>

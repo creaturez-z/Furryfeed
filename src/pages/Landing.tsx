@@ -5,6 +5,7 @@ import { Meal, Banner, BannerSettings, MealLayoutConfig } from '../types/databas
 import { useAuth } from '../contexts/AuthContext';
 import { ShoppingBag, User, LogOut, Settings } from 'lucide-react';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
+import { CustomFooter } from '../components/CustomFooter';
 import HeroSection from '../components/HeroSection';
 
 export function Landing() {
@@ -274,6 +275,7 @@ export function Landing() {
           )}
         </section>
       </main>
+      <CustomFooter />
       <WhatsAppBubble pageType="customer" />
     </div>
   );

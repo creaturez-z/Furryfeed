@@ -243,3 +243,62 @@ export interface MealLayoutConfig {
   created_at: string;
   updated_at: string;
 }
+
+export interface BrandSettings {
+  id: string;
+  business_name: string;
+  logo_url?: string;
+  favicon_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MenuItem {
+  id: string;
+  parent_id?: string;
+  label: string;
+  url: string;
+  display_order: number;
+  device_visibility: 'desktop' | 'mobile' | 'both';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LabelSetting {
+  id: string;
+  key: string;
+  value: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomCSS {
+  id: string;
+  css_content: string;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CMSPage {
+  id: string;
+  slug: string;
+  title: string;
+  content: string;
+  meta_description?: string;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FooterSettings {
+  id: string;
+  content: string;
+  custom_css: string;
+  custom_js: string;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}

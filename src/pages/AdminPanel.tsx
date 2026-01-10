@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, LogOut, LayoutDashboard, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet, Users, Package, BarChart3, Receipt, MessageCircle, Monitor, Grid } from 'lucide-react';
+import { ArrowLeft, LogOut, LayoutDashboard, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet, Users, Package, BarChart3, Receipt, MessageCircle, Monitor, Grid, Settings, Menu, Type, Code, FileText, Layout } from 'lucide-react';
 import { MealManagement } from '../components/admin/MealManagement';
 import { MealLayoutManagement } from '../components/admin/MealLayoutManagement';
 import { KitchenManagement } from '../components/admin/KitchenManagement';
@@ -16,8 +16,14 @@ import { CustomersManagement } from '../components/admin/CustomersManagement';
 import { SubscriptionsManagement } from '../components/admin/SubscriptionsManagement';
 import { ReportsManagement } from '../components/admin/ReportsManagement';
 import { WhatsAppManagement } from '../components/admin/WhatsAppManagement';
+import { BrandSettingsManagement } from '../components/admin/BrandSettingsManagement';
+import { MenuBuilderManagement } from '../components/admin/MenuBuilderManagement';
+import { LabelSettingsManagement } from '../components/admin/LabelSettingsManagement';
+import { CustomCSSManagement } from '../components/admin/CustomCSSManagement';
+import { PagesManagement } from '../components/admin/PagesManagement';
+import { FooterBuilderManagement } from '../components/admin/FooterBuilderManagement';
 
-type AdminTab = 'dashboard' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp';
+type AdminTab = 'dashboard' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer';
 
 export function AdminPanel() {
   const navigate = useNavigate();
@@ -222,6 +228,72 @@ export function AdminPanel() {
               <MessageCircle className="w-5 h-5" />
               <span>WhatsApp</span>
             </button>
+            <button
+              onClick={() => setActiveTab('brand-settings')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'brand-settings'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Settings className="w-5 h-5" />
+              <span>Brand</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('menu-builder')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'menu-builder'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Menu className="w-5 h-5" />
+              <span>Menu</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('label-settings')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'label-settings'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Type className="w-5 h-5" />
+              <span>Labels</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('custom-css')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'custom-css'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Code className="w-5 h-5" />
+              <span>Custom CSS</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('pages')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'pages'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <FileText className="w-5 h-5" />
+              <span>Pages</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('footer')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'footer'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Layout className="w-5 h-5" />
+              <span>Footer</span>
+            </button>
           </div>
         </div>
 
@@ -245,6 +317,12 @@ export function AdminPanel() {
         {activeTab === 'subscriptions' && <SubscriptionsManagement />}
         {activeTab === 'reports' && <ReportsManagement />}
         {activeTab === 'whatsapp' && <WhatsAppManagement />}
+        {activeTab === 'brand-settings' && <BrandSettingsManagement />}
+        {activeTab === 'menu-builder' && <MenuBuilderManagement />}
+        {activeTab === 'label-settings' && <LabelSettingsManagement />}
+        {activeTab === 'custom-css' && <CustomCSSManagement />}
+        {activeTab === 'pages' && <PagesManagement />}
+        {activeTab === 'footer' && <FooterBuilderManagement />}
       </div>
     </div>
   );

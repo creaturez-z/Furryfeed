@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SignIn } from './components/SignIn';
@@ -11,6 +11,8 @@ import { CustomerWallet } from './pages/CustomerWallet';
 import { AdminPanel } from './pages/AdminPanel';
 import { KitchenDashboard } from './pages/KitchenDashboard';
 import { DeliveryDashboard } from './pages/DeliveryDashboard';
+import { PageViewer } from './pages/PageViewer';
+import { supabase } from './lib/supabase';
 
 function AuthPage() {
   const [showSignIn, setShowSignIn] = useState(true);
@@ -125,14 +127,59 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/page/:slug"
+        element={
+          <ProtectedRoute>
+            <PageViewer />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
+}
+
+function CustomCSSInjector() {
+  useEffect(() => {
+    const loadCustomCSS = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('custom_css')
+          .select('*')
+          .eq('is_enabled', true)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data && data.css_content) {
+          const styleElement = document.createElement('style');
+          styleElement.id = 'custom-css';
+          styleElement.innerHTML = data.css_content;
+          document.head.appendChild(styleElement);
+        }
+      } catch (error) {
+        console.error('Error loading custom CSS:', error);
+      }
+    };
+
+    loadCustomCSS();
+
+    return () => {
+      const styleElement = document.getElementById('custom-css');
+      if (styleElement) {
+        styleElement.remove();
+      }
+    };
+  }, []);
+
+  return null;
 }
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <CustomCSSInjector />
         <AppRoutes />
       </AuthProvider>
     </BrowserRouter>

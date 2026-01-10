@@ -356,6 +356,13 @@ INSERT INTO cms_pages (slug, title, content, meta_description, is_published) VAL
   ('contact-us', 'Contact Us', '<h1>Contact Us</h1><p>Get in touch with us for any queries or support.</p>', 'Contact PetMeals', true)
 ON CONFLICT (slug) DO NOTHING;
 
+-- Insert default menu items
+INSERT INTO menu_items (label, url, display_order, device_visibility, is_active) VALUES
+  ('Home', '/', 0, 'both', true),
+  ('About Us', '/page/about-us', 1, 'both', true),
+  ('Contact', '/page/contact-us', 2, 'both', true)
+ON CONFLICT DO NOTHING;
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_menu_items_parent_id ON menu_items(parent_id);
 CREATE INDEX IF NOT EXISTS idx_menu_items_display_order ON menu_items(display_order);

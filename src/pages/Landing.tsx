@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ShoppingBag, User, LogOut, Settings } from 'lucide-react';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
 import { CustomFooter } from '../components/CustomFooter';
+import { DynamicMenu } from '../components/DynamicMenu';
 import HeroSection from '../components/HeroSection';
 
 export function Landing() {
@@ -19,19 +20,34 @@ export function Landing() {
   const [bannerMeals, setBannerMeals] = useState<Record<string, string[]>>({});
   const [selectedBannerId, setSelectedBannerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [brandSettings, setBrandSettings] = useState<{ business_name: string; logo_url?: string } | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (brandSettings) {
+      document.title = brandSettings.business_name;
+      if (brandSettings.logo_url) {
+        const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link');
+        link.type = 'image/x-icon';
+        link.rel = 'shortcut icon';
+        link.href = brandSettings.logo_url;
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+    }
+  }, [brandSettings]);
+
   const loadData = async () => {
     try {
-      const [mealsRes, bannersRes, bannerMealsRes, settingsRes, layoutConfigRes] = await Promise.all([
+      const [mealsRes, bannersRes, bannerMealsRes, settingsRes, layoutConfigRes, brandRes] = await Promise.all([
         supabase.from('meals').select('*').eq('is_active', true).order('sort_order').order('created_at'),
         supabase.from('banners').select('*').eq('is_active', true).order('display_order'),
         supabase.from('banner_meals').select('*'),
         supabase.from('banner_settings').select('*').limit(1).maybeSingle(),
         supabase.from('meal_layout_config').select('*').limit(1).maybeSingle(),
+        supabase.from('brand_settings').select('*').limit(1).maybeSingle(),
       ]);
 
       if (mealsRes.error) throw mealsRes.error;
@@ -44,6 +60,7 @@ export function Landing() {
       setBanners(bannersRes.data || []);
       setBannerSettings(settingsRes.data);
       setMealLayoutConfig(layoutConfigRes.data || { id: '', desktop_items_per_row: 3, mobile_items_per_row: 1, created_at: '', updated_at: '' });
+      setBrandSettings(brandRes.data || { business_name: 'PetMeals' });
 
       const mealsByBanner: Record<string, string[]> = {};
       (bannerMealsRes.data || []).forEach((bm) => {
@@ -131,8 +148,15 @@ export function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <ShoppingBag className="w-8 h-8 text-orange-500" />
-              <span className="text-xl font-bold text-gray-900">PetMeals</span>
+              {brandSettings?.logo_url ? (
+                <img src={brandSettings.logo_url} alt={brandSettings.business_name} className="h-8 object-contain" />
+              ) : (
+                <ShoppingBag className="w-8 h-8 text-orange-500" />
+              )}
+              <span className="text-xl font-bold text-gray-900">{brandSettings?.business_name || 'PetMeals'}</span>
+            </div>
+            <div className="hidden lg:flex items-center flex-1 justify-center px-8">
+              <DynamicMenu />
             </div>
             <div className="flex items-center space-x-4">
               {profile?.role === 'admin' && (
@@ -161,6 +185,9 @@ export function Landing() {
                 <span className="hidden sm:inline">Logout</span>
               </button>
             </div>
+          </div>
+          <div className="lg:hidden border-t border-gray-200 py-3">
+            <DynamicMenu isMobile={true} />
           </div>
         </div>
       </nav>

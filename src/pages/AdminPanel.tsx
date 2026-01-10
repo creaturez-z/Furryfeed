@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, LogOut, LayoutDashboard, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet, Users, Package, BarChart3, Receipt, MessageCircle, Monitor } from 'lucide-react';
+import { ArrowLeft, LogOut, LayoutDashboard, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet, Users, Package, BarChart3, Receipt, MessageCircle, Monitor, Grid } from 'lucide-react';
 import { MealManagement } from '../components/admin/MealManagement';
+import { MealLayoutManagement } from '../components/admin/MealLayoutManagement';
 import { KitchenManagement } from '../components/admin/KitchenManagement';
 import { StaffManagement } from '../components/admin/StaffManagement';
 import { DeliveryManagement } from '../components/admin/DeliveryManagement';
@@ -16,7 +17,7 @@ import { SubscriptionsManagement } from '../components/admin/SubscriptionsManage
 import { ReportsManagement } from '../components/admin/ReportsManagement';
 import { WhatsAppManagement } from '../components/admin/WhatsAppManagement';
 
-type AdminTab = 'dashboard' | 'meals' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp';
+type AdminTab = 'dashboard' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp';
 
 export function AdminPanel() {
   const navigate = useNavigate();
@@ -77,6 +78,17 @@ export function AdminPanel() {
             >
               <UtensilsCrossed className="w-5 h-5" />
               <span>Meals</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('meal-layout')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'meal-layout'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Grid className="w-5 h-5" />
+              <span>Meal Layout</span>
             </button>
             <button
               onClick={() => setActiveTab('weight-slabs')}
@@ -220,6 +232,7 @@ export function AdminPanel() {
           </div>
         )}
         {activeTab === 'meals' && <MealManagement />}
+        {activeTab === 'meal-layout' && <MealLayoutManagement />}
         {activeTab === 'weight-slabs' && <WeightSlabManagement />}
         {activeTab === 'tax-config' && <TaxConfigurationManagement />}
         {activeTab === 'banners' && <BannerManagement />}

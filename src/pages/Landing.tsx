@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Meal, Banner, BannerSettings } from '../types/database';
+import { Meal, Banner, BannerSettings, MealLayoutConfig } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
 import { ShoppingBag, User, LogOut, Settings } from 'lucide-react';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
@@ -14,6 +14,7 @@ export function Landing() {
   const [allMeals, setAllMeals] = useState<Meal[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [bannerSettings, setBannerSettings] = useState<BannerSettings | null>(null);
+  const [mealLayoutConfig, setMealLayoutConfig] = useState<MealLayoutConfig | null>(null);
   const [bannerMeals, setBannerMeals] = useState<Record<string, string[]>>({});
   const [selectedBannerId, setSelectedBannerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,11 +25,12 @@ export function Landing() {
 
   const loadData = async () => {
     try {
-      const [mealsRes, bannersRes, bannerMealsRes, settingsRes] = await Promise.all([
-        supabase.from('meals').select('*').eq('is_active', true).order('name'),
+      const [mealsRes, bannersRes, bannerMealsRes, settingsRes, layoutConfigRes] = await Promise.all([
+        supabase.from('meals').select('*').eq('is_active', true).order('sort_order').order('created_at'),
         supabase.from('banners').select('*').eq('is_active', true).order('display_order'),
         supabase.from('banner_meals').select('*'),
         supabase.from('banner_settings').select('*').limit(1).maybeSingle(),
+        supabase.from('meal_layout_config').select('*').limit(1).maybeSingle(),
       ]);
 
       if (mealsRes.error) throw mealsRes.error;
@@ -40,6 +42,7 @@ export function Landing() {
       setMeals(allMealsData);
       setBanners(bannersRes.data || []);
       setBannerSettings(settingsRes.data);
+      setMealLayoutConfig(layoutConfigRes.data || { id: '', desktop_items_per_row: 3, mobile_items_per_row: 1, created_at: '', updated_at: '' });
 
       const mealsByBanner: Record<string, string[]> = {};
       (bannerMealsRes.data || []).forEach((bm) => {
@@ -80,6 +83,35 @@ export function Landing() {
 
   const handleLogout = async () => {
     await signOut();
+  };
+
+  const getMealGridClass = () => {
+    if (!mealLayoutConfig) {
+      return 'grid-cols-1 md:grid-cols-3';
+    }
+
+    const mobileClassMap: Record<number, string> = {
+      1: 'grid-cols-1',
+      2: 'grid-cols-2',
+      3: 'grid-cols-3',
+      4: 'grid-cols-4',
+      5: 'grid-cols-5',
+      6: 'grid-cols-6',
+    };
+
+    const desktopClassMap: Record<number, string> = {
+      1: 'md:grid-cols-1',
+      2: 'md:grid-cols-2',
+      3: 'md:grid-cols-3',
+      4: 'md:grid-cols-4',
+      5: 'md:grid-cols-5',
+      6: 'md:grid-cols-6',
+    };
+
+    const mobileClass = mobileClassMap[mealLayoutConfig.mobile_items_per_row] || 'grid-cols-1';
+    const desktopClass = desktopClassMap[mealLayoutConfig.desktop_items_per_row] || 'md:grid-cols-3';
+
+    return `${mobileClass} ${desktopClass}`;
   };
 
   const displayedBanners = bannerSettings
@@ -189,7 +221,7 @@ export function Landing() {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className={`grid ${getMealGridClass()} gap-6`}>
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse">
                   <div className="h-48 bg-gray-200"></div>
@@ -205,7 +237,7 @@ export function Landing() {
               <p className="text-gray-500 text-lg">No meals available at the moment.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className={`grid ${getMealGridClass()} gap-6`}>
               {meals.map((meal) => (
                 <div
                   key={meal.id}

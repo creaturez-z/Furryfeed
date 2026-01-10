@@ -60,6 +60,7 @@ export interface Meal {
   sale_price?: number;
   base_price_per_10g: number;
   is_active: boolean;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -231,6 +232,14 @@ export interface WhatsAppConfig {
   show_on_customer: boolean;
   show_on_kitchen: boolean;
   icon_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MealLayoutConfig {
+  id: string;
+  desktop_items_per_row: number;
+  mobile_items_per_row: number;
   created_at: string;
   updated_at: string;
 }

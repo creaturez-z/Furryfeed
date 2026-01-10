@@ -199,17 +199,6 @@ export function Landing() {
 
       <HeroSection />
 
-      <header className="bg-gradient-to-r from-orange-500 to-amber-500 text-white py-16 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Healthy Meals for Your Furry Friends
-          </h1>
-          <p className="text-xl md:text-2xl text-orange-100">
-            Fresh, nutritious, and tailored to your pet's needs
-          </p>
-        </div>
-      </header>
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {displayedBanners.length > 0 && (
           <section className="mb-12">

@@ -8,6 +8,7 @@ import { WhatsAppBubble } from '../components/WhatsAppBubble';
 import { CustomFooter } from '../components/CustomFooter';
 import { DynamicMenu } from '../components/DynamicMenu';
 import HeroSection from '../components/HeroSection';
+import { AnnouncementBar } from '../components/AnnouncementBar';
 
 export function Landing() {
   const navigate = useNavigate();
@@ -144,6 +145,7 @@ export function Landing() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <AnnouncementBar />
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">

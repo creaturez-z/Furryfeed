@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Meal } from '../types/database';
 import { ArrowLeft, ShoppingCart } from 'lucide-react';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
+import { AnnouncementBar } from '../components/AnnouncementBar';
 
 export function MealDetails() {
   const { id } = useParams<{ id: string }>();
@@ -60,6 +61,7 @@ export function MealDetails() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <AnnouncementBar />
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">

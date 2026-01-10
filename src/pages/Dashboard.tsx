@@ -8,6 +8,7 @@ import { PetForm } from '../components/PetForm';
 import { ProfileForm } from '../components/ProfileForm';
 import { ensureWalletExists } from '../utils/wallet';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
+import { AnnouncementBar } from '../components/AnnouncementBar';
 
 type Tab = 'subscriptions' | 'pets' | 'profile';
 
@@ -140,6 +141,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <AnnouncementBar />
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">

@@ -143,6 +143,11 @@ function CustomCSSInjector() {
   useEffect(() => {
     const loadCustomCSS = async () => {
       try {
+        const existingStyle = document.getElementById('custom-css');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+
         const { data, error } = await supabase
           .from('custom_css')
           .select('*')
@@ -154,7 +159,8 @@ function CustomCSSInjector() {
         if (data && data.css_content) {
           const styleElement = document.createElement('style');
           styleElement.id = 'custom-css';
-          styleElement.innerHTML = data.css_content;
+          styleElement.setAttribute('type', 'text/css');
+          styleElement.textContent = data.css_content;
           document.head.appendChild(styleElement);
         }
       } catch (error) {
@@ -164,7 +170,23 @@ function CustomCSSInjector() {
 
     loadCustomCSS();
 
+    const channel = supabase
+      .channel('custom_css_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'custom_css'
+        },
+        () => {
+          loadCustomCSS();
+        }
+      )
+      .subscribe();
+
     return () => {
+      channel.unsubscribe();
       const styleElement = document.getElementById('custom-css');
       if (styleElement) {
         styleElement.remove();

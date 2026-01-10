@@ -5,41 +5,37 @@ import { Save, RotateCcw, Power } from 'lucide-react';
 
 const DEFAULT_CSS = `/* Custom CSS for PetMeals Website */
 
-/* Main container */
-.container { /* max-width: 1280px; */ }
+/* IMPORTANT: Use !important to override existing styles */
 
-/* Primary Colors */
-/* .bg-orange-500 { background-color: #f97316 !important; } */
-/* .text-orange-500 { color: #f97316 !important; } */
-/* .border-orange-500 { border-color: #f97316 !important; } */
+/* Example 1: Hide price on meal cards */
+/* .text-sm.text-gray-500 { display: none !important; } */
 
-/* Buttons */
-/* button { border-radius: 8px !important; } */
-/* .btn-primary { background-color: #f97316 !important; } */
+/* Example 2: Change primary brand color */
+/* .bg-orange-500 { background-color: #your-color !important; } */
+/* .text-orange-500 { color: #your-color !important; } */
+/* .border-orange-500 { border-color: #your-color !important; } */
 
-/* Meal Cards */
-/* .meal-card { border-radius: 12px !important; } */
-/* .meal-card:hover { transform: scale(1.05) !important; } */
-
-/* Header */
-/* header { background-color: #ffffff !important; } */
-/* header nav a { color: #374151 !important; } */
-/* header nav a:hover { color: #f97316 !important; } */
-
-/* Footer */
-/* footer { background-color: #111827 !important; } */
-/* footer a { color: #9ca3af !important; } */
-/* footer a:hover { color: #ffffff !important; } */
-
-/* Forms */
-/* input, select, textarea {
-  border-radius: 8px !important;
-  border-color: #d1d5db !important;
+/* Example 3: Customize buttons */
+/* button {
+  border-radius: 12px !important;
+  font-weight: 600 !important;
 } */
-/* input:focus, select:focus, textarea:focus {
-  border-color: #f97316 !important;
-  ring-color: #f97316 !important;
+
+/* Example 4: Meal Cards styling */
+/* .bg-white.rounded-xl.shadow-md {
+  border: 2px solid #e5e7eb !important;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
 } */
+
+/* Example 5: Header customization */
+/* nav.bg-white {
+  background-color: #1f2937 !important;
+  color: white !important;
+} */
+
+/* Example 6: Adjust font sizes */
+/* .text-3xl { font-size: 2.5rem !important; } */
+/* .text-xl { font-size: 1.5rem !important; } */
 
 /* Add your custom styles below */
 `;
@@ -191,14 +187,39 @@ export function CustomCSSManagement() {
 
       {cssData && (
         <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-            <h3 className="font-semibold text-blue-900 mb-2">Important Notes</h3>
-            <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-              <li>Use <code className="bg-blue-100 px-1 rounded">!important</code> to override existing styles</li>
-              <li>Changes will apply immediately after saving and enabling</li>
-              <li>Test your CSS on both desktop and mobile devices</li>
-              <li>Uncomment example styles by removing <code className="bg-blue-100 px-1 rounded">/*</code> and <code className="bg-blue-100 px-1 rounded">*/</code></li>
-            </ul>
+          <div className="space-y-3">
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <h3 className="font-semibold text-blue-900 mb-2">How to Use Custom CSS</h3>
+              <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                <li>Use <code className="bg-blue-100 px-1 rounded">!important</code> to override existing styles</li>
+                <li>Changes apply instantly after saving and enabling (no page refresh needed)</li>
+                <li>Uncomment examples by removing <code className="bg-blue-100 px-1 rounded">/*</code> and <code className="bg-blue-100 px-1 rounded">*/</code></li>
+                <li>Test CSS on both desktop and mobile devices</li>
+              </ul>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+              <h3 className="font-semibold text-green-900 mb-2">Quick Test</h3>
+              <p className="text-sm text-green-800">
+                To test if CSS is working, try this simple example:
+              </p>
+              <code className="block bg-green-100 px-3 py-2 rounded mt-2 text-sm">
+                .text-sm.text-gray-500 {"{ display: none !important; }"}
+              </code>
+              <p className="text-sm text-green-800 mt-2">
+                This will hide price text on meal cards. If it works, your CSS is applying correctly!
+              </p>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
+              <h3 className="font-semibold text-amber-900 mb-2">Troubleshooting</h3>
+              <ul className="text-sm text-amber-800 space-y-1 list-disc list-inside">
+                <li>Make sure "Enabled" toggle is ON</li>
+                <li>Check browser console (F12) for CSS syntax errors</li>
+                <li>Use browser DevTools to inspect elements and verify selectors</li>
+                <li>Always add <code className="bg-amber-100 px-1 rounded">!important</code> to override Tailwind CSS</li>
+              </ul>
+            </div>
           </div>
 
           <div>

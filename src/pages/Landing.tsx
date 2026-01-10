@@ -11,6 +11,13 @@ import HeroSection from '../components/HeroSection';
 import { AnnouncementBar } from '../components/AnnouncementBar';
 import { FeaturedBanners } from '../components/FeaturedBanners';
 
+interface SectionLayout {
+  id: string;
+  section_name: 'all_meals' | 'featured_collections';
+  display_order: number;
+  is_visible: boolean;
+}
+
 export function Landing() {
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
@@ -23,6 +30,7 @@ export function Landing() {
   const [selectedBannerId, setSelectedBannerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [brandSettings, setBrandSettings] = useState<{ business_name: string; logo_url?: string } | null>(null);
+  const [sectionLayout, setSectionLayout] = useState<SectionLayout[]>([]);
 
   useEffect(() => {
     loadData();
@@ -43,13 +51,14 @@ export function Landing() {
 
   const loadData = async () => {
     try {
-      const [mealsRes, bannersRes, bannerMealsRes, settingsRes, layoutConfigRes, brandRes] = await Promise.all([
+      const [mealsRes, bannersRes, bannerMealsRes, settingsRes, layoutConfigRes, brandRes, sectionLayoutRes] = await Promise.all([
         supabase.from('meals').select('*').eq('is_active', true).order('sort_order').order('created_at'),
         supabase.from('banners').select('*').eq('is_active', true).order('display_order'),
         supabase.from('banner_meals').select('*'),
         supabase.from('banner_settings').select('*').limit(1).maybeSingle(),
         supabase.from('meal_layout_config').select('*').limit(1).maybeSingle(),
         supabase.from('brand_settings').select('*').limit(1).maybeSingle(),
+        supabase.from('section_layout').select('*').eq('is_visible', true).order('display_order'),
       ]);
 
       if (mealsRes.error) throw mealsRes.error;
@@ -63,6 +72,7 @@ export function Landing() {
       setBannerSettings(settingsRes.data);
       setMealLayoutConfig(layoutConfigRes.data || { id: '', desktop_items_per_row: 3, mobile_items_per_row: 1, created_at: '', updated_at: '' });
       setBrandSettings(brandRes.data || { business_name: 'PetMeals' });
+      setSectionLayout(sectionLayoutRes.data || []);
 
       const mealsByBanner: Record<string, string[]> = {};
       (bannerMealsRes.data || []).forEach((bm) => {
@@ -144,6 +154,125 @@ export function Landing() {
       }`
     : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
 
+  const renderFeaturedCollections = () => {
+    if (displayedBanners.length === 0) return null;
+
+    return (
+      <section className="mb-12">
+        <FeaturedBanners position="above_featured_collections" />
+        <h2 className="text-3xl font-bold text-gray-900 mb-6">Featured Collections</h2>
+        <div className={`grid ${gridColsClass} gap-6`}>
+          {displayedBanners.map((banner) => (
+            <div
+              key={banner.id}
+              onClick={() => handleBannerClick(banner)}
+              className={`relative rounded-xl overflow-hidden cursor-pointer transform transition-all hover:scale-105 hover:shadow-xl ${
+                selectedBannerId === banner.id ? 'ring-4 ring-orange-500' : ''
+              }`}
+            >
+              <img
+                src={banner.image_url}
+                alt={banner.title}
+                className="w-full h-48 object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-4">
+                <h3 className="text-white text-xl font-bold">{banner.title}</h3>
+                <p className="text-white/90 text-sm line-clamp-2">{banner.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <FeaturedBanners position="below_featured_collections" />
+      </section>
+    );
+  };
+
+  const renderAllMeals = () => {
+    return (
+      <section id="meals-section">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-3xl font-bold text-gray-900">
+            {selectedBannerId ? 'Selected Meals' : 'All Meals'}
+          </h2>
+          {selectedBannerId && (
+            <button
+              onClick={handleShowAllMeals}
+              className="px-4 py-2 text-orange-500 hover:text-orange-600 font-medium transition-colors"
+            >
+              Show All Meals
+            </button>
+          )}
+        </div>
+
+        {loading ? (
+          <div className={`grid ${getMealGridClass()} gap-6`}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse">
+                <div className="h-48 bg-gray-200"></div>
+                <div className="p-6">
+                  <div className="h-6 bg-gray-200 rounded mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : meals.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">No meals available at the moment.</p>
+          </div>
+        ) : (
+          <div className={`grid ${getMealGridClass()} gap-6`}>
+            {meals.map((meal) => (
+              <div
+                key={meal.id}
+                onClick={() => navigate(`/meals/${meal.id}`)}
+                className="bg-white rounded-xl shadow-md overflow-hidden cursor-pointer transform transition-all hover:scale-105 hover:shadow-xl"
+              >
+                <img src={meal.image_url} alt={meal.name} className="w-full h-48 object-cover" />
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{meal.name}</h3>
+                  <p className="text-gray-600 line-clamp-2">{meal.description}</p>
+                  <div className="mt-4 flex items-center justify-between">
+                    {meal.mrp && meal.sale_price ? (
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-400 line-through">
+                          ₹{meal.mrp}/10g
+                        </span>
+                        <span className="text-sm text-orange-600 font-semibold">
+                          ₹{meal.sale_price}/10g
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-500">
+                        From ₹{meal.sale_price || meal.base_price_per_10g}/10g
+                      </span>
+                    )}
+                    <button className="text-orange-500 hover:text-orange-600 font-medium">
+                      View Details →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  };
+
+  const renderSections = () => {
+    return sectionLayout.map((section) => {
+      switch (section.section_name) {
+        case 'featured_collections':
+          return <div key={section.id}>{renderFeaturedCollections()}</div>;
+        case 'all_meals':
+          return <div key={section.id}>{renderAllMeals()}</div>;
+        default:
+          return null;
+      }
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AnnouncementBar />
@@ -197,106 +326,16 @@ export function Landing() {
 
       <FeaturedBanners position="below_header" />
 
+      <FeaturedBanners position="above_hero" />
+
       <HeroSection />
 
+      <FeaturedBanners position="below_hero" />
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {displayedBanners.length > 0 && (
-          <section className="mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Featured Collections</h2>
-            <div className={`grid ${gridColsClass} gap-6`}>
-              {displayedBanners.map((banner) => (
-                <div
-                  key={banner.id}
-                  onClick={() => handleBannerClick(banner)}
-                  className={`relative rounded-xl overflow-hidden cursor-pointer transform transition-all hover:scale-105 hover:shadow-xl ${
-                    selectedBannerId === banner.id ? 'ring-4 ring-orange-500' : ''
-                  }`}
-                >
-                  <img
-                    src={banner.image_url}
-                    alt={banner.title}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-4">
-                    <h3 className="text-white text-xl font-bold">{banner.title}</h3>
-                    <p className="text-white/90 text-sm line-clamp-2">{banner.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        {renderSections()}
 
         <FeaturedBanners position="middle" />
-
-        <section id="meals-section">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-bold text-gray-900">
-              {selectedBannerId ? 'Selected Meals' : 'All Meals'}
-            </h2>
-            {selectedBannerId && (
-              <button
-                onClick={handleShowAllMeals}
-                className="px-4 py-2 text-orange-500 hover:text-orange-600 font-medium transition-colors"
-              >
-                Show All Meals
-              </button>
-            )}
-          </div>
-
-          {loading ? (
-            <div className={`grid ${getMealGridClass()} gap-6`}>
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse">
-                  <div className="h-48 bg-gray-200"></div>
-                  <div className="p-6">
-                    <div className="h-6 bg-gray-200 rounded mb-4"></div>
-                    <div className="h-4 bg-gray-200 rounded"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : meals.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No meals available at the moment.</p>
-            </div>
-          ) : (
-            <div className={`grid ${getMealGridClass()} gap-6`}>
-              {meals.map((meal) => (
-                <div
-                  key={meal.id}
-                  onClick={() => navigate(`/meals/${meal.id}`)}
-                  className="bg-white rounded-xl shadow-md overflow-hidden cursor-pointer transform transition-all hover:scale-105 hover:shadow-xl"
-                >
-                  <img src={meal.image_url} alt={meal.name} className="w-full h-48 object-cover" />
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{meal.name}</h3>
-                    <p className="text-gray-600 line-clamp-2">{meal.description}</p>
-                    <div className="mt-4 flex items-center justify-between">
-                      {meal.mrp && meal.sale_price ? (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-400 line-through">
-                            ₹{meal.mrp}/10g
-                          </span>
-                          <span className="text-sm text-orange-600 font-semibold">
-                            ₹{meal.sale_price}/10g
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-500">
-                          From ₹{meal.sale_price || meal.base_price_per_10g}/10g
-                        </span>
-                      )}
-                      <button className="text-orange-500 hover:text-orange-600 font-medium">
-                        View Details →
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
       </main>
 
       <FeaturedBanners position="above_footer" />

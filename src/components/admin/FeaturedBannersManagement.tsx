@@ -8,7 +8,7 @@ interface FeaturedBanner {
   content: string;
   custom_css: string;
   custom_js: string;
-  position: 'below_header' | 'middle' | 'above_footer';
+  position: 'above_hero' | 'below_hero' | 'above_featured_collections' | 'below_featured_collections' | 'below_header' | 'middle' | 'above_footer';
   display_order: number;
   is_enabled: boolean;
   created_at: string;
@@ -26,7 +26,7 @@ export function FeaturedBannersManagement() {
     content: '',
     custom_css: '',
     custom_js: '',
-    position: 'below_header' as 'below_header' | 'middle' | 'above_footer',
+    position: 'below_hero' as 'above_hero' | 'below_hero' | 'above_featured_collections' | 'below_featured_collections' | 'below_header' | 'middle' | 'above_footer',
     is_enabled: true,
   });
 
@@ -187,7 +187,7 @@ export function FeaturedBannersManagement() {
         content: '',
         custom_css: '',
         custom_js: '',
-        position: 'below_header',
+        position: 'below_hero',
         is_enabled: true,
       });
     }
@@ -201,14 +201,22 @@ export function FeaturedBannersManagement() {
 
   const getPositionLabel = (position: string) => {
     switch (position) {
-      case 'below_header': return 'Below Header';
-      case 'middle': return 'Middle';
+      case 'above_hero': return 'Above Hero Banner';
+      case 'below_hero': return 'Below Hero Banner';
+      case 'above_featured_collections': return 'Above Featured Collections';
+      case 'below_featured_collections': return 'Below Featured Collections';
+      case 'below_header': return 'Below Header (Legacy)';
+      case 'middle': return 'Middle (Legacy)';
       case 'above_footer': return 'Above Footer';
       default: return position;
     }
   };
 
   const groupedBanners = {
+    above_hero: banners.filter(b => b.position === 'above_hero'),
+    below_hero: banners.filter(b => b.position === 'below_hero'),
+    above_featured_collections: banners.filter(b => b.position === 'above_featured_collections'),
+    below_featured_collections: banners.filter(b => b.position === 'below_featured_collections'),
     below_header: banners.filter(b => b.position === 'below_header'),
     middle: banners.filter(b => b.position === 'middle'),
     above_footer: banners.filter(b => b.position === 'above_footer'),
@@ -344,9 +352,13 @@ export function FeaturedBannersManagement() {
                   onChange={(e) => setFormData({ ...formData, position: e.target.value as any })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 >
-                  <option value="below_header">Below Header</option>
-                  <option value="middle">Middle</option>
+                  <option value="above_hero">Above Hero Banner</option>
+                  <option value="below_hero">Below Hero Banner</option>
+                  <option value="above_featured_collections">Above Featured Collections</option>
+                  <option value="below_featured_collections">Below Featured Collections</option>
                   <option value="above_footer">Above Footer</option>
+                  <option value="below_header">Below Header (Legacy)</option>
+                  <option value="middle">Middle (Legacy)</option>
                 </select>
               </div>
 

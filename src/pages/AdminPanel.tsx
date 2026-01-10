@@ -25,8 +25,9 @@ import { LabelSettingsManagement } from '../components/admin/LabelSettingsManage
 import { CustomCSSManagement } from '../components/admin/CustomCSSManagement';
 import { PagesManagement } from '../components/admin/PagesManagement';
 import { FooterBuilderManagement } from '../components/admin/FooterBuilderManagement';
+import { SectionOrderManagement } from '../components/admin/SectionOrderManagement';
 
-type AdminTab = 'dashboard' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer';
+type AdminTab = 'dashboard' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'section-order' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer';
 
 export function AdminPanel() {
   const navigate = useNavigate();
@@ -93,6 +94,7 @@ export function AdminPanel() {
           {activeTab === 'hero-banners' && <HeroBannerManagement />}
           {activeTab === 'featured-banners' && <FeaturedBannersManagement />}
           {activeTab === 'announcement-bar' && <AnnouncementBarManagement />}
+          {activeTab === 'section-order' && <SectionOrderManagement />}
           {activeTab === 'kitchens' && <KitchenManagement />}
           {activeTab === 'staff' && <StaffManagement />}
           {activeTab === 'delivery' && <DeliveryManagement />}

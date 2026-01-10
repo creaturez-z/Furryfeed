@@ -26,6 +26,7 @@ import {
   ChevronDown,
   ChevronRight,
   X,
+  Layers,
 } from 'lucide-react';
 
 type AdminTab =
@@ -38,6 +39,7 @@ type AdminTab =
   | 'hero-banners'
   | 'featured-banners'
   | 'announcement-bar'
+  | 'section-order'
   | 'brand-settings'
   | 'menu-builder'
   | 'label-settings'
@@ -96,6 +98,7 @@ const sidebarGroups: SidebarGroup[] = [
       { id: 'hero-banners', label: 'Hero Banners', icon: Monitor },
       { id: 'featured-banners', label: 'Featured Banners', icon: Frame },
       { id: 'announcement-bar', label: 'Announcement Bar', icon: Megaphone },
+      { id: 'section-order', label: 'Section Order', icon: Layers },
       { id: 'brand-settings', label: 'Brand Settings', icon: Settings },
       { id: 'menu-builder', label: 'Menu Builder', icon: Menu },
       { id: 'label-settings', label: 'Label Settings', icon: Type },

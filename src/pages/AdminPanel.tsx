@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, LogOut, LayoutDashboard, UtensilsCrossed, Building, ChefHat, Truck, Weight, Image, Wallet, Users, Package, BarChart3, Receipt, MessageCircle, Monitor, Grid, Settings, Menu, Type, Code, FileText, Layout } from 'lucide-react';
+import { ArrowLeft, LogOut, Menu } from 'lucide-react';
+import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { MealManagement } from '../components/admin/MealManagement';
 import { MealLayoutManagement } from '../components/admin/MealLayoutManagement';
 import { KitchenManagement } from '../components/admin/KitchenManagement';
@@ -11,6 +12,8 @@ import { WeightSlabManagement } from '../components/admin/WeightSlabManagement';
 import { TaxConfigurationManagement } from '../components/admin/TaxConfigurationManagement';
 import { BannerManagement } from '../components/admin/BannerManagement';
 import { HeroBannerManagement } from '../components/admin/HeroBannerManagement';
+import { FeaturedBannersManagement } from '../components/admin/FeaturedBannersManagement';
+import { AnnouncementBarManagement } from '../components/admin/AnnouncementBarManagement';
 import { WalletManagement } from '../components/admin/WalletManagement';
 import { CustomersManagement } from '../components/admin/CustomersManagement';
 import { SubscriptionsManagement } from '../components/admin/SubscriptionsManagement';
@@ -23,306 +26,88 @@ import { CustomCSSManagement } from '../components/admin/CustomCSSManagement';
 import { PagesManagement } from '../components/admin/PagesManagement';
 import { FooterBuilderManagement } from '../components/admin/FooterBuilderManagement';
 
-type AdminTab = 'dashboard' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer';
+type AdminTab = 'dashboard' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer';
 
 export function AdminPanel() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+    <div className="min-h-screen bg-gray-50 flex">
+      <AdminSidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      <div className="flex-1 flex flex-col min-h-screen">
+        <nav className="bg-white shadow-sm sticky top-0 z-30">
+          <div className="px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="lg:hidden p-2 text-gray-700 hover:text-orange-500 transition-colors"
+                >
+                  <Menu className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={() => navigate('/')}
+                  className="flex items-center space-x-2 text-gray-700 hover:text-orange-500 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  <span>Home</span>
+                </button>
+                <h1 className="text-xl font-bold text-gray-900 hidden sm:block">Admin Panel</h1>
+              </div>
               <button
-                onClick={() => navigate('/')}
-                className="flex items-center space-x-2 text-gray-700 hover:text-orange-500 transition-colors"
+                onClick={handleLogout}
+                className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-red-500 transition-colors"
               >
-                <ArrowLeft className="w-5 h-5" />
-                <span>Home</span>
+                <LogOut className="w-5 h-5" />
+                <span className="hidden sm:inline">Logout</span>
               </button>
-              <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-red-500 transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-xl shadow-md mb-6">
-          <div className="flex border-b border-gray-200 overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'dashboard'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <LayoutDashboard className="w-5 h-5" />
-              <span>Dashboard</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('meals')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'meals'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <UtensilsCrossed className="w-5 h-5" />
-              <span>Meals</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('meal-layout')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'meal-layout'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Grid className="w-5 h-5" />
-              <span>Meal Layout</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('weight-slabs')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'weight-slabs'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Weight className="w-5 h-5" />
-              <span>Weight Slabs</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('tax-config')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'tax-config'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Receipt className="w-5 h-5" />
-              <span>Tax Config</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('banners')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'banners'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Image className="w-5 h-5" />
-              <span>Banners</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('hero-banners')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'hero-banners'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Monitor className="w-5 h-5" />
-              <span>Hero Banners</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('kitchens')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'kitchens'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Building className="w-5 h-5" />
-              <span>Kitchens</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('staff')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'staff'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <ChefHat className="w-5 h-5" />
-              <span>Kitchen Staff</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('delivery')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'delivery'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Truck className="w-5 h-5" />
-              <span>Delivery</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('wallet')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'wallet'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Wallet className="w-5 h-5" />
-              <span>Wallet</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('customers')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'customers'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Users className="w-5 h-5" />
-              <span>Customers</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('subscriptions')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'subscriptions'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Package className="w-5 h-5" />
-              <span>Subscriptions</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('reports')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'reports'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <BarChart3 className="w-5 h-5" />
-              <span>Reports</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('whatsapp')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'whatsapp'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <MessageCircle className="w-5 h-5" />
-              <span>WhatsApp</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('brand-settings')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'brand-settings'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Settings className="w-5 h-5" />
-              <span>Brand</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('menu-builder')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'menu-builder'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Menu className="w-5 h-5" />
-              <span>Menu</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('label-settings')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'label-settings'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Type className="w-5 h-5" />
-              <span>Labels</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('custom-css')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'custom-css'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Code className="w-5 h-5" />
-              <span>Custom CSS</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('pages')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'pages'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <FileText className="w-5 h-5" />
-              <span>Pages</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('footer')}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'footer'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Layout className="w-5 h-5" />
-              <span>Footer</span>
-            </button>
-          </div>
-        </div>
-
-        {activeTab === 'dashboard' && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Dashboard Overview</h2>
-            <p className="text-gray-600">Welcome to the admin panel. Use the tabs above to manage your platform.</p>
-          </div>
-        )}
-        {activeTab === 'meals' && <MealManagement />}
-        {activeTab === 'meal-layout' && <MealLayoutManagement />}
-        {activeTab === 'weight-slabs' && <WeightSlabManagement />}
-        {activeTab === 'tax-config' && <TaxConfigurationManagement />}
-        {activeTab === 'banners' && <BannerManagement />}
-        {activeTab === 'hero-banners' && <HeroBannerManagement />}
-        {activeTab === 'kitchens' && <KitchenManagement />}
-        {activeTab === 'staff' && <StaffManagement />}
-        {activeTab === 'delivery' && <DeliveryManagement />}
-        {activeTab === 'wallet' && <WalletManagement />}
-        {activeTab === 'customers' && <CustomersManagement />}
-        {activeTab === 'subscriptions' && <SubscriptionsManagement />}
-        {activeTab === 'reports' && <ReportsManagement />}
-        {activeTab === 'whatsapp' && <WhatsAppManagement />}
-        {activeTab === 'brand-settings' && <BrandSettingsManagement />}
-        {activeTab === 'menu-builder' && <MenuBuilderManagement />}
-        {activeTab === 'label-settings' && <LabelSettingsManagement />}
-        {activeTab === 'custom-css' && <CustomCSSManagement />}
-        {activeTab === 'pages' && <PagesManagement />}
-        {activeTab === 'footer' && <FooterBuilderManagement />}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          {activeTab === 'dashboard' && (
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Dashboard Overview</h2>
+              <p className="text-gray-600">Welcome to the admin panel. Use the sidebar to manage your platform.</p>
+            </div>
+          )}
+          {activeTab === 'meals' && <MealManagement />}
+          {activeTab === 'meal-layout' && <MealLayoutManagement />}
+          {activeTab === 'weight-slabs' && <WeightSlabManagement />}
+          {activeTab === 'tax-config' && <TaxConfigurationManagement />}
+          {activeTab === 'banners' && <BannerManagement />}
+          {activeTab === 'hero-banners' && <HeroBannerManagement />}
+          {activeTab === 'featured-banners' && <FeaturedBannersManagement />}
+          {activeTab === 'announcement-bar' && <AnnouncementBarManagement />}
+          {activeTab === 'kitchens' && <KitchenManagement />}
+          {activeTab === 'staff' && <StaffManagement />}
+          {activeTab === 'delivery' && <DeliveryManagement />}
+          {activeTab === 'wallet' && <WalletManagement />}
+          {activeTab === 'customers' && <CustomersManagement />}
+          {activeTab === 'subscriptions' && <SubscriptionsManagement />}
+          {activeTab === 'reports' && <ReportsManagement />}
+          {activeTab === 'whatsapp' && <WhatsAppManagement />}
+          {activeTab === 'brand-settings' && <BrandSettingsManagement />}
+          {activeTab === 'menu-builder' && <MenuBuilderManagement />}
+          {activeTab === 'label-settings' && <LabelSettingsManagement />}
+          {activeTab === 'custom-css' && <CustomCSSManagement />}
+          {activeTab === 'pages' && <PagesManagement />}
+          {activeTab === 'footer' && <FooterBuilderManagement />}
+        </main>
       </div>
     </div>
   );

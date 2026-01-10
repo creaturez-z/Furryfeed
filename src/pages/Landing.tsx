@@ -9,6 +9,7 @@ import { CustomFooter } from '../components/CustomFooter';
 import { DynamicMenu } from '../components/DynamicMenu';
 import HeroSection from '../components/HeroSection';
 import { AnnouncementBar } from '../components/AnnouncementBar';
+import { FeaturedBanners } from '../components/FeaturedBanners';
 
 export function Landing() {
   const navigate = useNavigate();
@@ -194,6 +195,8 @@ export function Landing() {
         </div>
       </nav>
 
+      <FeaturedBanners position="below_header" />
+
       <HeroSection />
 
       <header className="bg-gradient-to-r from-orange-500 to-amber-500 text-white py-16 px-4">
@@ -234,6 +237,8 @@ export function Landing() {
             </div>
           </section>
         )}
+
+        <FeaturedBanners position="middle" />
 
         <section id="meals-section">
           <div className="flex items-center justify-between mb-6">
@@ -304,6 +309,9 @@ export function Landing() {
           )}
         </section>
       </main>
+
+      <FeaturedBanners position="above_footer" />
+
       <CustomFooter />
       <WhatsAppBubble pageType="customer" />
     </div>

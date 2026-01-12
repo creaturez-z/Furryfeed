@@ -10,6 +10,7 @@ import { ensureWalletExists } from '../utils/wallet';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
 import { AnnouncementBar } from '../components/AnnouncementBar';
 import { SubscriptionCalendarView } from '../components/SubscriptionCalendarView';
+import { SubscriptionDetailsView } from '../components/SubscriptionDetailsView';
 
 type Tab = 'subscriptions' | 'pets' | 'profile';
 
@@ -34,9 +35,13 @@ export function Dashboard() {
   const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [subscriptionToCancel, setSubscriptionToCancel] = useState<string | null>(null);
+  const [showDetailsView, setShowDetailsView] = useState(false);
+  const [detailsSubscriptionId, setDetailsSubscriptionId] = useState<string | null>(null);
+  const [invoiceAccessEnabled, setInvoiceAccessEnabled] = useState(false);
 
   useEffect(() => {
     loadData();
+    checkInvoiceAccess();
   }, []);
 
   const loadData = async () => {
@@ -44,6 +49,21 @@ export function Dashboard() {
       await Promise.all([loadPets(), loadSubscriptions(), loadWallet()]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkInvoiceAccess = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('invoice_settings')
+        .select('customer_can_access')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      setInvoiceAccessEnabled(data?.customer_can_access || false);
+    } catch (error) {
+      console.error('Error checking invoice access:', error);
     }
   };
 
@@ -330,28 +350,39 @@ export function Dashboard() {
                               <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(sub.status)}`}>
                                 {sub.status}
                               </span>
-                              {sub.status === 'active' && (
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => {
-                                      setSelectedSubscriptionId(sub.id);
-                                      setShowCalendarView(true);
-                                    }}
-                                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                                  >
-                                    Manage Calendar
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setSubscriptionToCancel(sub.id);
-                                      setShowCancelModal(true);
-                                    }}
-                                    className="text-sm text-red-600 hover:text-red-700"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              )}
+                              <div className="flex flex-col gap-2">
+                                <button
+                                  onClick={() => {
+                                    setDetailsSubscriptionId(sub.id);
+                                    setShowDetailsView(true);
+                                  }}
+                                  className="text-sm text-gray-700 hover:text-gray-900 font-medium"
+                                >
+                                  View Details
+                                </button>
+                                {sub.status === 'active' && (
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setSelectedSubscriptionId(sub.id);
+                                        setShowCalendarView(true);
+                                      }}
+                                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                    >
+                                      Manage Calendar
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setSubscriptionToCancel(sub.id);
+                                        setShowCancelModal(true);
+                                      }}
+                                      className="text-sm text-red-600 hover:text-red-700"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                               {sub.status === 'paused' && (
                                 <button
                                   onClick={() => handleUpdateSubscriptionStatus(sub.id, 'active')}
@@ -501,6 +532,17 @@ export function Dashboard() {
             setSelectedSubscriptionId(null);
           }}
           isAdmin={false}
+        />
+      )}
+
+      {showDetailsView && detailsSubscriptionId && (
+        <SubscriptionDetailsView
+          subscriptionId={detailsSubscriptionId}
+          onClose={() => {
+            setShowDetailsView(false);
+            setDetailsSubscriptionId(null);
+          }}
+          canViewInvoice={invoiceAccessEnabled}
         />
       )}
 

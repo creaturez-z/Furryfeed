@@ -27,8 +27,12 @@ import { CustomCSSManagement } from '../components/admin/CustomCSSManagement';
 import { PagesManagement } from '../components/admin/PagesManagement';
 import { FooterBuilderManagement } from '../components/admin/FooterBuilderManagement';
 import { SectionOrderManagement } from '../components/admin/SectionOrderManagement';
+import { AdminCalendarView } from '../components/admin/AdminCalendarView';
+import { ActivityLogsManagement } from '../components/admin/ActivityLogsManagement';
+import { InvoiceManagement } from '../components/admin/InvoiceManagement';
+import { AdminManagement } from '../components/admin/AdminManagement';
 
-type AdminTab = 'dashboard' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'section-order' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer';
+type AdminTab = 'dashboard' | 'calendar' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'section-order' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer' | 'invoices' | 'activity-logs' | 'admin-management';
 
 export function AdminPanel() {
   const navigate = useNavigate();
@@ -82,6 +86,7 @@ export function AdminPanel() {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           {activeTab === 'dashboard' && <OrdersDashboard />}
+          {activeTab === 'calendar' && <AdminCalendarView />}
           {activeTab === 'meals' && <MealManagement />}
           {activeTab === 'meal-layout' && <MealLayoutManagement />}
           {activeTab === 'weight-slabs' && <WeightSlabManagement />}
@@ -105,6 +110,9 @@ export function AdminPanel() {
           {activeTab === 'custom-css' && <CustomCSSManagement />}
           {activeTab === 'pages' && <PagesManagement />}
           {activeTab === 'footer' && <FooterBuilderManagement />}
+          {activeTab === 'invoices' && <InvoiceManagement />}
+          {activeTab === 'activity-logs' && <ActivityLogsManagement />}
+          {activeTab === 'admin-management' && <AdminManagement />}
         </main>
       </div>
     </div>

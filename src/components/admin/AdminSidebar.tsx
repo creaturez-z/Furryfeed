@@ -27,10 +27,14 @@ import {
   ChevronRight,
   X,
   Layers,
+  Calendar,
+  Shield,
+  Activity,
 } from 'lucide-react';
 
 type AdminTab =
   | 'dashboard'
+  | 'calendar'
   | 'meals'
   | 'meal-layout'
   | 'weight-slabs'
@@ -53,7 +57,10 @@ type AdminTab =
   | 'wallet'
   | 'reports'
   | 'whatsapp'
-  | 'pages';
+  | 'pages'
+  | 'invoices'
+  | 'activity-logs'
+  | 'admin-management';
 
 interface SidebarGroup {
   id: string;
@@ -78,6 +85,7 @@ const sidebarGroups: SidebarGroup[] = [
     label: 'Overview',
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'calendar', label: 'Calendar View', icon: Calendar },
     ],
   },
   {
@@ -122,6 +130,7 @@ const sidebarGroups: SidebarGroup[] = [
       { id: 'customers', label: 'Customers', icon: Users },
       { id: 'subscriptions', label: 'Subscriptions', icon: Package },
       { id: 'wallet', label: 'Wallet', icon: Wallet },
+      { id: 'invoices', label: 'Invoices', icon: Receipt },
     ],
   },
   {
@@ -143,6 +152,14 @@ const sidebarGroups: SidebarGroup[] = [
     label: 'Content & Pages',
     items: [
       { id: 'pages', label: 'Pages', icon: FileText },
+    ],
+  },
+  {
+    id: 'system-admin',
+    label: 'System & Admin',
+    items: [
+      { id: 'admin-management', label: 'Admin Users', icon: Shield },
+      { id: 'activity-logs', label: 'Activity Logs', icon: Activity },
     ],
   },
 ];

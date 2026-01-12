@@ -13,6 +13,9 @@ export function CustomersManagement() {
   const [showBanModal, setShowBanModal] = useState(false);
   const [banningCustomer, setBanningCustomer] = useState<ProfileWithWallet | null>(null);
   const [banReason, setBanReason] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingCustomer, setDeletingCustomer] = useState<ProfileWithWallet | null>(null);
+  const [deleteOption, setDeleteOption] = useState<'customer' | 'customer_invoices' | 'customer_subscriptions' | 'customer_all'>('customer');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -117,15 +120,67 @@ export function CustomersManagement() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this customer? This action cannot be undone.'))
-      return;
+  const handleDeleteClick = (customer: ProfileWithWallet) => {
+    setDeletingCustomer(customer);
+    setDeleteOption('customer');
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingCustomer) return;
 
     try {
-      const { error } = await supabase.from('profiles').delete().eq('id', id);
+      if (deleteOption === 'customer_invoices' || deleteOption === 'customer_all') {
+        const { error: invoicesError } = await supabase
+          .from('invoices')
+          .delete()
+          .eq('customer_id', deletingCustomer.id);
+
+        if (invoicesError) throw invoicesError;
+      }
+
+      if (deleteOption === 'customer_subscriptions' || deleteOption === 'customer_all') {
+        const { data: subscriptions } = await supabase
+          .from('subscriptions')
+          .select('id')
+          .eq('customer_id', deletingCustomer.id);
+
+        if (subscriptions && subscriptions.length > 0) {
+          const subscriptionIds = subscriptions.map(s => s.id);
+
+          await supabase
+            .from('subscription_daily_items')
+            .delete()
+            .in('subscription_id', subscriptionIds);
+
+          await supabase
+            .from('subscription_pets')
+            .delete()
+            .in('subscription_id', subscriptionIds);
+
+          await supabase
+            .from('subscription_items')
+            .delete()
+            .in('subscription_id', subscriptionIds);
+
+          await supabase
+            .from('subscriptions')
+            .delete()
+            .eq('customer_id', deletingCustomer.id);
+        }
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', deletingCustomer.id);
 
       if (error) throw error;
+
+      setShowDeleteModal(false);
+      setDeletingCustomer(null);
       await loadCustomers();
+      alert('Customer deleted successfully');
     } catch (error) {
       console.error('Error deleting customer:', error);
       alert('Failed to delete customer');
@@ -402,7 +457,7 @@ export function CustomersManagement() {
                           )}
                         </button>
                         <button
-                          onClick={() => handleDelete(customer.id)}
+                          onClick={() => handleDeleteClick(customer)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                           title="Delete"
                         >
@@ -467,6 +522,99 @@ export function CustomersManagement() {
                   setBanReason('');
                 }}
                 className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && deletingCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Delete Customer</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              You are about to delete <span className="font-semibold">{deletingCustomer.name}</span>.
+              Please choose what data to delete:
+            </p>
+
+            <div className="space-y-3 mb-6">
+              <label className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="deleteOption"
+                  value="customer"
+                  checked={deleteOption === 'customer'}
+                  onChange={(e) => setDeleteOption(e.target.value as any)}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium text-gray-900">Delete customer only</div>
+                  <div className="text-xs text-gray-500">Keep all subscriptions and invoices</div>
+                </div>
+              </label>
+
+              <label className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="deleteOption"
+                  value="customer_invoices"
+                  checked={deleteOption === 'customer_invoices'}
+                  onChange={(e) => setDeleteOption(e.target.value as any)}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium text-gray-900">Delete customer + all invoices</div>
+                  <div className="text-xs text-gray-500">Keep subscriptions</div>
+                </div>
+              </label>
+
+              <label className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="deleteOption"
+                  value="customer_subscriptions"
+                  checked={deleteOption === 'customer_subscriptions'}
+                  onChange={(e) => setDeleteOption(e.target.value as any)}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium text-gray-900">Delete customer + all subscriptions</div>
+                  <div className="text-xs text-gray-500">Keep invoices</div>
+                </div>
+              </label>
+
+              <label className="flex items-start space-x-3 p-3 border border-red-200 rounded-lg cursor-pointer hover:bg-red-50">
+                <input
+                  type="radio"
+                  name="deleteOption"
+                  value="customer_all"
+                  checked={deleteOption === 'customer_all'}
+                  onChange={(e) => setDeleteOption(e.target.value as any)}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium text-red-900">Delete everything</div>
+                  <div className="text-xs text-red-600">Delete customer, subscriptions, and invoices</div>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleDeleteConfirm}
+                className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeletingCustomer(null);
+                  setDeleteOption('customer');
+                }}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
               >
                 Cancel
               </button>

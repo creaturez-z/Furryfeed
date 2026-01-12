@@ -360,16 +360,24 @@ export function Dashboard() {
                                 >
                                   View Details
                                 </button>
+                                {sub.status !== 'cancelled' && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSubscriptionId(sub.id);
+                                      setShowCalendarView(true);
+                                    }}
+                                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                  >
+                                    Manage Subscription
+                                  </button>
+                                )}
                                 {sub.status === 'active' && (
                                   <div className="flex gap-2">
                                     <button
-                                      onClick={() => {
-                                        setSelectedSubscriptionId(sub.id);
-                                        setShowCalendarView(true);
-                                      }}
-                                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                      onClick={() => handleUpdateSubscriptionStatus(sub.id, 'paused')}
+                                      className="text-sm text-yellow-600 hover:text-yellow-700 font-medium"
                                     >
-                                      Manage Calendar
+                                      Pause
                                     </button>
                                     <button
                                       onClick={() => {
@@ -382,15 +390,15 @@ export function Dashboard() {
                                     </button>
                                   </div>
                                 )}
+                                {sub.status === 'paused' && (
+                                  <button
+                                    onClick={() => handleUpdateSubscriptionStatus(sub.id, 'active')}
+                                    className="text-sm text-green-600 hover:text-green-700 font-medium"
+                                  >
+                                    Resume
+                                  </button>
+                                )}
                               </div>
-                              {sub.status === 'paused' && (
-                                <button
-                                  onClick={() => handleUpdateSubscriptionStatus(sub.id, 'active')}
-                                  className="text-sm text-green-600 hover:text-green-700"
-                                >
-                                  Resume
-                                </button>
-                              )}
                             </div>
                           </div>
                         </div>

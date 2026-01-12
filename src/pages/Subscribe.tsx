@@ -9,6 +9,7 @@ import { ensureWalletExists } from '../utils/wallet';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
 import { PetForm } from '../components/PetForm';
 import { AnnouncementBar } from '../components/AnnouncementBar';
+import { generateInvoiceForSubscription } from '../utils/invoiceGenerator';
 
 type Wallet = {
   id: string;
@@ -401,6 +402,8 @@ export function Subscribe() {
       });
 
       if (transactionError) throw transactionError;
+
+      await generateInvoiceForSubscription(subscription.id, user!.id);
 
       setPetsWithSubscriptions(prev => [...prev, selectedPetId]);
 

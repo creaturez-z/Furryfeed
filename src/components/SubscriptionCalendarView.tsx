@@ -33,6 +33,15 @@ export function SubscriptionCalendarView({ subscriptionId, onClose, onUpdate, is
   const loadDailyItems = async () => {
     try {
       setLoading(true);
+
+      const { data: subscription, error: subError } = await supabase
+        .from('subscriptions')
+        .select('status, start_date, end_date')
+        .eq('id', subscriptionId)
+        .single();
+
+      if (subError) throw subError;
+
       const { data, error } = await supabase
         .from('subscription_daily_items')
         .select(`
@@ -55,6 +64,7 @@ export function SubscriptionCalendarView({ subscriptionId, onClose, onUpdate, is
         meal_name: item.meal?.name || 'Unknown',
         quantity: item.quantity,
         price: item.price,
+        status: subscription.status,
       }));
 
       setDailyItems(formatted);

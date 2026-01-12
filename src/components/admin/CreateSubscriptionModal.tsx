@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { X, Calendar, Plus, Minus } from 'lucide-react';
 import { ProfileWithEmail, Pet, Meal, WeightSlab } from '../../types/database';
+import { generateInvoiceForSubscription } from '../../utils/invoiceGenerator';
+import { logActivity } from '../../utils/activityLogger';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface CreateSubscriptionModalProps {
   onClose: () => void;
@@ -24,6 +27,7 @@ interface CalendarDay {
 }
 
 export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustomerId }: CreateSubscriptionModalProps) {
+  const { profile } = useAuth();
   const [customers, setCustomers] = useState<ProfileWithEmail[]>([]);
   const [pets, setPets] = useState<Pet[]>([]);
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -228,6 +232,18 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
             }
           }
         }
+      }
+
+      await generateInvoiceForSubscription(subscription.id, selectedCustomerId);
+
+      if (profile) {
+        await logActivity(
+          profile.name,
+          `Created subscription for customer ${customers.find(c => c.id === selectedCustomerId)?.name}`,
+          'subscription',
+          subscription.id,
+          'subscription'
+        );
       }
 
       onSuccess();

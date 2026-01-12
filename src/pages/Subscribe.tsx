@@ -45,6 +45,7 @@ export function Subscribe() {
 
   const [selectedPetId, setSelectedPetId] = useState<string>('');
   const [selectedMealIds, setSelectedMealIds] = useState<string[]>([]);
+  const [deliveryAddress, setDeliveryAddress] = useState<string>('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
@@ -341,6 +342,7 @@ export function Subscribe() {
           tax_name: taxCalculation?.taxName,
           tax_percentage: taxCalculation?.taxPercentage,
           tax_amount: taxCalculation?.taxAmount || 0,
+          delivery_address: deliveryAddress,
           status: 'active',
           start_date: startDate,
           end_date: endDate,
@@ -658,7 +660,7 @@ export function Subscribe() {
                   <p className="text-sm text-gray-600 mb-3">
                     Subscriptions must start from tomorrow. Same-day subscriptions are not allowed.
                   </p>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Start Date *
@@ -686,11 +688,27 @@ export function Subscribe() {
                       />
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Delivery Address *
+                    </label>
+                    <textarea
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      required
+                      rows={3}
+                      placeholder="Enter your complete delivery address..."
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      This address will be used for all deliveries. You can update it later from your dashboard.
+                    </p>
+                  </div>
                 </div>
 
                 <button
                   onClick={generateCalendarDays}
-                  disabled={!selectedPetId || selectedMealIds.length === 0 || !startDate || !endDate}
+                  disabled={!selectedPetId || selectedMealIds.length === 0 || !startDate || !endDate || !deliveryAddress.trim()}
                   className="w-full bg-orange-500 text-white py-4 rounded-xl font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
                   <CalendarIcon className="w-5 h-5" />

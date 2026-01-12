@@ -8,6 +8,7 @@ export interface Profile {
   is_banned?: boolean;
   banned_at?: string;
   ban_reason?: string;
+  tax_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -115,6 +116,7 @@ export interface Subscription {
   tax_name?: string;
   tax_percentage?: number;
   tax_amount?: number;
+  delivery_address?: string;
   created_at: string;
   updated_at: string;
 }

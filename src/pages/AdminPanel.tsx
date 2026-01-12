@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, LogOut, Menu } from 'lucide-react';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { OrdersDashboard } from '../components/admin/OrdersDashboard';
 import { MealManagement } from '../components/admin/MealManagement';
 import { MealLayoutManagement } from '../components/admin/MealLayoutManagement';
 import { KitchenManagement } from '../components/admin/KitchenManagement';
@@ -80,12 +81,7 @@ export function AdminPanel() {
         </nav>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          {activeTab === 'dashboard' && (
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Dashboard Overview</h2>
-              <p className="text-gray-600">Welcome to the admin panel. Use the sidebar to manage your platform.</p>
-            </div>
-          )}
+          {activeTab === 'dashboard' && <OrdersDashboard />}
           {activeTab === 'meals' && <MealManagement />}
           {activeTab === 'meal-layout' && <MealLayoutManagement />}
           {activeTab === 'weight-slabs' && <WeightSlabManagement />}

@@ -13,8 +13,19 @@ interface TaxConfiguration {
   updated_at: string;
 }
 
+interface InvoiceSettings {
+  id: string;
+  company_name: string;
+  company_address: string;
+  company_phone: string;
+  company_gst_number: string;
+  invoice_prefix: string;
+  next_invoice_number: number;
+}
+
 export function TaxConfigurationManagement() {
   const [taxConfigs, setTaxConfigs] = useState<TaxConfiguration[]>([]);
+  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -25,9 +36,17 @@ export function TaxConfigurationManagement() {
     applies_to: 'both' as 'subscriptions' | 'one_time_orders' | 'both',
     is_active: false,
   });
+  const [companyData, setCompanyData] = useState({
+    company_name: '',
+    company_address: '',
+    company_phone: '',
+    company_gst_number: '',
+    invoice_prefix: 'INV-',
+  });
 
   useEffect(() => {
     loadTaxConfigurations();
+    loadInvoiceSettings();
   }, []);
 
   const loadTaxConfigurations = async () => {
@@ -44,6 +63,71 @@ export function TaxConfigurationManagement() {
       console.error('Error loading tax configurations:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadInvoiceSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('invoice_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setInvoiceSettings(data);
+        setCompanyData({
+          company_name: data.company_name || '',
+          company_address: data.company_address || '',
+          company_phone: data.company_phone || '',
+          company_gst_number: data.company_gst_number || '',
+          invoice_prefix: data.invoice_prefix || 'INV-',
+        });
+      }
+    } catch (error) {
+      console.error('Error loading invoice settings:', error);
+    }
+  };
+
+  const handleSaveCompanyDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      if (invoiceSettings) {
+        const { error } = await supabase
+          .from('invoice_settings')
+          .update({
+            company_name: companyData.company_name,
+            company_address: companyData.company_address,
+            company_phone: companyData.company_phone,
+            company_gst_number: companyData.company_gst_number,
+            invoice_prefix: companyData.invoice_prefix,
+          })
+          .eq('id', invoiceSettings.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('invoice_settings')
+          .insert({
+            company_name: companyData.company_name,
+            company_address: companyData.company_address,
+            company_phone: companyData.company_phone,
+            company_gst_number: companyData.company_gst_number,
+            invoice_prefix: companyData.invoice_prefix,
+            next_invoice_number: 1000,
+          });
+
+        if (error) throw error;
+      }
+
+      await loadInvoiceSettings();
+      alert('Company details saved successfully');
+    } catch (error) {
+      console.error('Error saving company details:', error);
+      alert('Failed to save company details');
     }
   };
 
@@ -152,7 +236,7 @@ export function TaxConfigurationManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Tax Configuration</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Tax & Invoice Configuration</h2>
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
@@ -160,6 +244,91 @@ export function TaxConfigurationManagement() {
           <Plus className="w-5 h-5" />
           <span>Add Tax Rule</span>
         </button>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Company & Invoice Details</h3>
+        <p className="text-sm text-gray-600 mb-6">
+          These details will appear on all generated invoices. Update them to match your business information.
+        </p>
+        <form onSubmit={handleSaveCompanyDetails} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={companyData.company_name}
+                onChange={(e) => setCompanyData({ ...companyData, company_name: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                placeholder="Your Company Name"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Phone Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={companyData.company_phone}
+                onChange={(e) => setCompanyData({ ...companyData, company_phone: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                placeholder="+91 XXXXXXXXXX"
+                required
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company Address <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={companyData.company_address}
+                onChange={(e) => setCompanyData({ ...companyData, company_address: e.target.value })}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                placeholder="Full business address"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                GST Number
+              </label>
+              <input
+                type="text"
+                value={companyData.company_gst_number}
+                onChange={(e) => setCompanyData({ ...companyData, company_gst_number: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                placeholder="e.g., 22AAAAA0000A1Z5"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Invoice Prefix
+              </label>
+              <input
+                type="text"
+                value={companyData.invoice_prefix}
+                onChange={(e) => setCompanyData({ ...companyData, invoice_prefix: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                placeholder="INV-"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Save Company Details
+          </button>
+        </form>
       </div>
 
       {showForm && (

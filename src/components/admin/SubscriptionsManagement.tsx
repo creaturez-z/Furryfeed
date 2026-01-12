@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Subscription, ProfileWithEmail, Pet, Meal } from '../../types/database';
-import { Search, Play, Pause, XCircle, Eye, Calendar, Plus } from 'lucide-react';
+import { Search, Play, Pause, XCircle, Eye, Calendar, Plus, FileText } from 'lucide-react';
 import { CreateSubscriptionModal } from './CreateSubscriptionModal';
 import { SubscriptionCalendarView } from '../SubscriptionCalendarView';
+import { InvoiceViewer } from '../InvoiceViewer';
 
 type SubscriptionWithDetails = Subscription & {
   customer?: ProfileWithEmail;
@@ -25,6 +26,8 @@ export function SubscriptionsManagement() {
   const [showCalendarView, setShowCalendarView] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [subscriptionToCancel, setSubscriptionToCancel] = useState<string | null>(null);
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [invoiceId, setInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     loadSubscriptions();
@@ -243,6 +246,27 @@ export function SubscriptionsManagement() {
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            const { data } = await supabase
+                              .from('invoices')
+                              .select('id')
+                              .eq('subscription_id', subscription.id)
+                              .limit(1)
+                              .maybeSingle();
+
+                            if (data) {
+                              setInvoiceId(data.id);
+                              setShowInvoice(true);
+                            } else {
+                              alert('No invoice found for this subscription');
+                            }
+                          }}
+                          className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg"
+                          title="View Invoice"
+                        >
+                          <FileText className="w-4 h-4" />
                         </button>
                         {subscription.status === 'active' && (
                           <button
@@ -471,6 +495,10 @@ export function SubscriptionsManagement() {
             </div>
           </div>
         </div>
+      )}
+
+      {showInvoice && invoiceId && (
+        <InvoiceViewer invoiceId={invoiceId} onClose={() => setShowInvoice(false)} />
       )}
     </div>
   );

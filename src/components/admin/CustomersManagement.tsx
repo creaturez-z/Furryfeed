@@ -442,6 +442,30 @@ export function CustomersManagement() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={async () => {
+                            try {
+                              const { error } = await supabase
+                                .from('profiles')
+                                .update({ can_view_invoice: !customer.can_view_invoice })
+                                .eq('id', customer.id);
+
+                              if (error) throw error;
+                              await loadCustomers();
+                            } catch (error) {
+                              console.error('Error toggling invoice access:', error);
+                              alert('Failed to toggle invoice access');
+                            }
+                          }}
+                          className={`p-2 rounded-lg ${
+                            customer.can_view_invoice
+                              ? 'text-blue-600 hover:bg-blue-50'
+                              : 'text-gray-400 hover:bg-gray-50'
+                          }`}
+                          title={customer.can_view_invoice ? 'Disable Invoice Access' : 'Enable Invoice Access'}
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleBanClick(customer)}
                           className={`p-2 rounded-lg ${
                             customer.is_banned

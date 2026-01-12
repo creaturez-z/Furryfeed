@@ -41,29 +41,19 @@ export function Dashboard() {
 
   useEffect(() => {
     loadData();
-    checkInvoiceAccess();
   }, []);
+
+  useEffect(() => {
+    if (profile) {
+      setInvoiceAccessEnabled(profile.can_view_invoice || false);
+    }
+  }, [profile]);
 
   const loadData = async () => {
     try {
       await Promise.all([loadPets(), loadSubscriptions(), loadWallet()]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const checkInvoiceAccess = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('invoice_settings')
-        .select('customer_can_access')
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-      setInvoiceAccessEnabled(data?.customer_can_access || false);
-    } catch (error) {
-      console.error('Error checking invoice access:', error);
     }
   };
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Calendar as CalendarIcon, FileText } from 'lucide-react';
+import { InvoiceViewer } from './InvoiceViewer';
 
 interface DailyItem {
   id: string;
@@ -22,6 +23,8 @@ export function SubscriptionDetailsView({ subscriptionId, onClose, canViewInvoic
   const [dailyItems, setDailyItems] = useState<DailyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [invoiceId, setInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -211,14 +214,35 @@ export function SubscriptionDetailsView({ subscriptionId, onClose, canViewInvoic
 
           {canViewInvoice && (
             <div className="border-t pt-4">
-              <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 font-medium">
+              <button
+                onClick={async () => {
+                  const { data } = await supabase
+                    .from('invoices')
+                    .select('id')
+                    .eq('subscription_id', subscriptionId)
+                    .limit(1)
+                    .maybeSingle();
+
+                  if (data) {
+                    setInvoiceId(data.id);
+                    setShowInvoice(true);
+                  } else {
+                    alert('No invoice found for this subscription');
+                  }
+                }}
+                className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 font-medium"
+              >
                 <FileText className="w-5 h-5" />
-                <span>View Invoices</span>
+                <span>View Invoice</span>
               </button>
             </div>
           )}
         </div>
       </div>
+
+      {showInvoice && invoiceId && (
+        <InvoiceViewer invoiceId={invoiceId} onClose={() => setShowInvoice(false)} />
+      )}
     </div>
   );
 }

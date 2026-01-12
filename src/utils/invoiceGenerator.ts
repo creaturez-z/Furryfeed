@@ -66,12 +66,17 @@ export async function generateInvoiceForSubscription(
     const { data: taxConfig, error: taxError } = await supabase
       .from('tax_configurations')
       .select('*')
+      .eq('is_active', true)
       .limit(1)
       .maybeSingle();
 
     let taxAmount = 0;
-    if (taxConfig && taxConfig.tax_rate) {
-      taxAmount = (subtotal * taxConfig.tax_rate) / 100;
+    if (taxConfig && taxConfig.tax_percentage) {
+      if (taxConfig.tax_type === 'exclusive') {
+        taxAmount = (subtotal * taxConfig.tax_percentage) / 100;
+      } else {
+        taxAmount = subtotal - (subtotal / (1 + taxConfig.tax_percentage / 100));
+      }
     }
 
     const totalAmount = subtotal + taxAmount;

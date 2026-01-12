@@ -4,7 +4,7 @@ import { Subscription, ProfileWithEmail, Pet, Meal } from '../../types/database'
 import { Search, Play, Pause, XCircle, Eye, Calendar, Plus, FileText } from 'lucide-react';
 import { CreateSubscriptionModal } from './CreateSubscriptionModal';
 import { SubscriptionCalendarView } from '../SubscriptionCalendarView';
-import { InvoiceViewer } from '../InvoiceViewer';
+import { InvoiceModal } from '../InvoiceModal';
 
 type SubscriptionWithDetails = Subscription & {
   customer?: ProfileWithEmail;
@@ -498,7 +498,7 @@ export function SubscriptionsManagement() {
       )}
 
       {showInvoice && invoiceId && (
-        <InvoiceViewer invoiceId={invoiceId} onClose={() => setShowInvoice(false)} />
+        <InvoiceModal invoiceId={invoiceId} onClose={() => setShowInvoice(false)} />
       )}
     </div>
   );

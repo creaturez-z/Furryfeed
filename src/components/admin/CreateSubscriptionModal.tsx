@@ -150,11 +150,21 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
 
   const updateMealCount = (dayIndex: number, mealIndex: number, change: number) => {
     setCalendarDays(prev => {
-      const updated = [...prev];
-      const newCount = updated[dayIndex].meals[mealIndex].count + change;
-      if (newCount >= 0) {
-        updated[dayIndex].meals[mealIndex].count = newCount;
-      }
+      const updated = prev.map((day, dIdx) => {
+        if (dIdx === dayIndex) {
+          return {
+            ...day,
+            meals: day.meals.map((meal, mIdx) => {
+              if (mIdx === mealIndex) {
+                const newCount = meal.count + change;
+                return newCount >= 0 ? { ...meal, count: newCount } : meal;
+              }
+              return meal;
+            })
+          };
+        }
+        return day;
+      });
       return updated;
     });
   };

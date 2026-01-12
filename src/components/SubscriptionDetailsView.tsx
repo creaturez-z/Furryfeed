@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Calendar as CalendarIcon, FileText } from 'lucide-react';
-import { InvoiceViewer } from './InvoiceViewer';
+import { InvoiceModal } from './InvoiceModal';
 
 interface DailyItem {
   id: string;
@@ -241,7 +241,7 @@ export function SubscriptionDetailsView({ subscriptionId, onClose, canViewInvoic
       </div>
 
       {showInvoice && invoiceId && (
-        <InvoiceViewer invoiceId={invoiceId} onClose={() => setShowInvoice(false)} />
+        <InvoiceModal invoiceId={invoiceId} onClose={() => setShowInvoice(false)} />
       )}
     </div>
   );

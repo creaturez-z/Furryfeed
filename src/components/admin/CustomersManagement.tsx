@@ -306,6 +306,7 @@ export function CustomersManagement() {
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
                   Wallet Balance
                 </th>
+                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Tax</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Status</th>
                 <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">
                   Actions
@@ -315,7 +316,7 @@ export function CustomersManagement() {
             <tbody>
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-gray-500">
+                  <td colSpan={7} className="text-center py-8 text-gray-500">
                     No customers found
                   </td>
                 </tr>
@@ -334,6 +335,34 @@ export function CustomersManagement() {
                       <span className="text-sm font-medium text-orange-600">
                         ₹{(customer.wallet_balance || 0).toFixed(2)}
                       </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <button
+                        onClick={async () => {
+                          try {
+                            const newValue = !customer.tax_enabled;
+                            const { error } = await supabase
+                              .from('profiles')
+                              .update({ tax_enabled: newValue })
+                              .eq('id', customer.id);
+                            if (error) throw error;
+                            await loadCustomers();
+                          } catch (error) {
+                            console.error('Error updating tax setting:', error);
+                            alert('Failed to update tax setting');
+                          }
+                        }}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          customer.tax_enabled !== false ? 'bg-green-500' : 'bg-gray-300'
+                        }`}
+                        title={customer.tax_enabled !== false ? 'Tax Enabled' : 'Tax Disabled'}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            customer.tax_enabled !== false ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
                     </td>
                     <td className="py-4 px-6">
                       {customer.is_banned ? (

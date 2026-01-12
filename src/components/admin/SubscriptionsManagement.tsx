@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Subscription, ProfileWithEmail, Pet, Meal } from '../../types/database';
-import { Search, Play, Pause, XCircle, Eye } from 'lucide-react';
+import { Search, Play, Pause, XCircle, Eye, Calendar } from 'lucide-react';
 
 type SubscriptionWithDetails = Subscription & {
   customer?: ProfileWithEmail;
@@ -15,6 +15,8 @@ export function SubscriptionsManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionWithDetails | null>(null);
 
@@ -39,8 +41,16 @@ export function SubscriptionsManagement() {
       filtered = filtered.filter((sub) => sub.status === statusFilter);
     }
 
+    if (startDate) {
+      filtered = filtered.filter((sub) => sub.start_date >= startDate);
+    }
+
+    if (endDate) {
+      filtered = filtered.filter((sub) => sub.start_date <= endDate);
+    }
+
     setFilteredSubscriptions(filtered);
-  }, [searchTerm, statusFilter, subscriptions]);
+  }, [searchTerm, statusFilter, startDate, endDate, subscriptions]);
 
   const loadSubscriptions = async () => {
     setLoading(true);
@@ -116,7 +126,7 @@ export function SubscriptionsManagement() {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Subscription Management</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
@@ -140,6 +150,26 @@ export function SubscriptionsManagement() {
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
           </select>
+        </div>
+        <div className="relative">
+          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="date"
+            placeholder="Start Date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+          />
+        </div>
+        <div className="relative">
+          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="date"
+            placeholder="End Date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+          />
         </div>
       </div>
 

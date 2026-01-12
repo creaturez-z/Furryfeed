@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Subscription, ProfileWithEmail, Pet, Meal } from '../../types/database';
-import { Search, Play, Pause, XCircle, Eye, Calendar } from 'lucide-react';
+import { Search, Play, Pause, XCircle, Eye, Calendar, Plus } from 'lucide-react';
+import { CreateSubscriptionModal } from './CreateSubscriptionModal';
+import { SubscriptionCalendarView } from '../SubscriptionCalendarView';
 
 type SubscriptionWithDetails = Subscription & {
   customer?: ProfileWithEmail;
@@ -19,6 +21,10 @@ export function SubscriptionsManagement() {
   const [endDate, setEndDate] = useState('');
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionWithDetails | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCalendarView, setShowCalendarView] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [subscriptionToCancel, setSubscriptionToCancel] = useState<string | null>(null);
 
   useEffect(() => {
     loadSubscriptions();
@@ -124,7 +130,16 @@ export function SubscriptionsManagement() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Subscription Management</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">Subscription Management</h2>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+        >
+          <Plus className="w-5 h-5" />
+          <span>Create Subscription</span>
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="relative">
@@ -250,18 +265,22 @@ export function SubscriptionsManagement() {
                         {(subscription.status === 'active' || subscription.status === 'paused') && (
                           <button
                             onClick={() => {
-                              if (
-                                confirm(
-                                  'Are you sure you want to cancel this subscription? This action cannot be undone.'
-                                )
-                              ) {
-                                handleStatusChange(subscription.id, 'cancelled');
-                              }
+                              setSubscriptionToCancel(subscription.id);
+                              setShowCancelModal(true);
                             }}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                             title="Cancel"
                           >
                             <XCircle className="w-4 h-4" />
+                          </button>
+                        )}
+                        {subscription.status === 'cancelled' && (
+                          <button
+                            onClick={() => handleStatusChange(subscription.id, 'active')}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                            title="Reactivate"
+                          >
+                            <Play className="w-4 h-4" />
                           </button>
                         )}
                       </div>
@@ -376,7 +395,79 @@ export function SubscriptionsManagement() {
                     {new Date(selectedSubscription.created_at).toLocaleString()}
                   </p>
                 </div>
+
+                <div className="border-t pt-4 flex space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowCalendarView(true);
+                      setShowDetailsModal(false);
+                    }}
+                    className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <Calendar className="w-5 h-5" />
+                    <span>Manage Calendar</span>
+                  </button>
+                </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateModal && (
+        <CreateSubscriptionModal
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            setShowCreateModal(false);
+            loadSubscriptions();
+          }}
+        />
+      )}
+
+      {showCalendarView && selectedSubscription && (
+        <SubscriptionCalendarView
+          subscriptionId={selectedSubscription.id}
+          onClose={() => {
+            setShowCalendarView(false);
+            setShowDetailsModal(true);
+          }}
+          onUpdate={() => {
+            loadSubscriptions();
+            setShowCalendarView(false);
+          }}
+          isAdmin={true}
+        />
+      )}
+
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Cancel Subscription</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to cancel this subscription? This action will prevent future deliveries.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  if (subscriptionToCancel) {
+                    handleStatusChange(subscriptionToCancel, 'cancelled');
+                  }
+                  setShowCancelModal(false);
+                  setSubscriptionToCancel(null);
+                }}
+                className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Yes, Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setSubscriptionToCancel(null);
+                }}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                No, Keep It
+              </button>
             </div>
           </div>
         </div>

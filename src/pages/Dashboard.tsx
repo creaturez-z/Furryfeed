@@ -9,6 +9,7 @@ import { ProfileForm } from '../components/ProfileForm';
 import { ensureWalletExists } from '../utils/wallet';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
 import { AnnouncementBar } from '../components/AnnouncementBar';
+import { SubscriptionCalendarView } from '../components/SubscriptionCalendarView';
 
 type Tab = 'subscriptions' | 'pets' | 'profile';
 
@@ -29,6 +30,10 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showPetForm, setShowPetForm] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
+  const [showCalendarView, setShowCalendarView] = useState(false);
+  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [subscriptionToCancel, setSubscriptionToCancel] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -328,19 +333,19 @@ export function Dashboard() {
                               {sub.status === 'active' && (
                                 <div className="flex gap-2">
                                   <button
-                                    onClick={() => handleUpdateSubscriptionStatus(sub.id, 'paused')}
-                                    className="text-sm text-yellow-600 hover:text-yellow-700"
+                                    onClick={() => {
+                                      setSelectedSubscriptionId(sub.id);
+                                      setShowCalendarView(true);
+                                    }}
+                                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                                   >
-                                    Pause
+                                    Manage Calendar
                                   </button>
                                   <button
-                                    onClick={() => handleUpdateSubscriptionStatus(sub.id, 'skipped')}
-                                    className="text-sm text-gray-600 hover:text-gray-700"
-                                  >
-                                    Skip
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdateSubscriptionStatus(sub.id, 'cancelled')}
+                                    onClick={() => {
+                                      setSubscriptionToCancel(sub.id);
+                                      setShowCancelModal(true);
+                                    }}
                                     className="text-sm text-red-600 hover:text-red-700"
                                   >
                                     Cancel
@@ -482,6 +487,57 @@ export function Dashboard() {
           </>
         )}
       </div>
+
+      {showCalendarView && selectedSubscriptionId && (
+        <SubscriptionCalendarView
+          subscriptionId={selectedSubscriptionId}
+          onClose={() => {
+            setShowCalendarView(false);
+            setSelectedSubscriptionId(null);
+          }}
+          onUpdate={() => {
+            loadSubscriptions();
+            setShowCalendarView(false);
+            setSelectedSubscriptionId(null);
+          }}
+          isAdmin={false}
+        />
+      )}
+
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Cancel Subscription</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to cancel this subscription? This action will prevent future deliveries.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  if (subscriptionToCancel) {
+                    handleUpdateSubscriptionStatus(subscriptionToCancel, 'cancelled');
+                  }
+                  setShowCancelModal(false);
+                  setSubscriptionToCancel(null);
+                }}
+                className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Yes, Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setSubscriptionToCancel(null);
+                }}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                No, Keep It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <WhatsAppBubble pageType="customer" />
     </div>
   );

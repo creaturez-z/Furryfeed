@@ -38,37 +38,39 @@ export function OrdersDashboard() {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from('orders')
+      const { data: dailyItems, error: dailyError } = await supabase
+        .from('subscription_daily_items')
         .select(`
           id,
           quantity,
-          total_amount,
-          delivery_address,
-          scheduled_date,
-          status,
-          created_at,
-          customer:profiles!orders_customer_id_fkey(name),
-          pet:pets!orders_pet_id_fkey(name),
-          meal:meals!orders_meal_id_fkey(name)
+          price,
+          delivery_date,
+          subscription:subscriptions!inner(
+            id,
+            status,
+            delivery_address,
+            customer:profiles!subscriptions_customer_id_fkey(name)
+          ),
+          pet:pets!inner(name),
+          meal:meals!inner(name)
         `)
-        .gte('scheduled_date', startDate)
-        .lte('scheduled_date', endDate)
-        .order('scheduled_date', { ascending: true });
+        .gte('delivery_date', startDate)
+        .lte('delivery_date', endDate)
+        .order('delivery_date', { ascending: true });
 
-      if (error) throw error;
+      if (dailyError) throw dailyError;
 
-      const formattedOrders: OrderWithDetails[] = (data || []).map((order: any) => ({
-        id: order.id,
-        customer_name: order.customer?.name || 'Unknown',
-        pet_name: order.pet?.name || 'Unknown',
-        delivery_address: order.delivery_address || 'N/A',
-        meal_name: order.meal?.name || 'Unknown',
-        quantity: order.quantity,
-        total_amount: order.total_amount,
-        scheduled_date: order.scheduled_date,
-        status: order.status,
-        created_at: order.created_at,
+      const formattedOrders: OrderWithDetails[] = (dailyItems || []).map((item: any) => ({
+        id: item.id,
+        customer_name: item.subscription?.customer?.name || 'Unknown',
+        pet_name: item.pet?.name || 'Unknown',
+        delivery_address: item.subscription?.delivery_address || 'N/A',
+        meal_name: item.meal?.name || 'Unknown',
+        quantity: item.quantity,
+        total_amount: item.price,
+        scheduled_date: item.delivery_date,
+        status: item.subscription?.status || 'pending',
+        created_at: item.delivery_date,
       }));
 
       setOrders(formattedOrders);

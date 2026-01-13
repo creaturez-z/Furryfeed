@@ -15,6 +15,7 @@ export function MealManagement() {
   const [newMapping, setNewMapping] = useState({
     inventory_item_id: '',
     quantity_used: '',
+    unit: 'g',
   });
   const [newIngredient, setNewIngredient] = useState({
     ingredient_name: '',
@@ -90,7 +91,7 @@ export function MealManagement() {
   };
 
   const handleAddInventoryMapping = async () => {
-    if (!editingMeal || !newMapping.inventory_item_id || !newMapping.quantity_used) {
+    if (!editingMeal || !newMapping.inventory_item_id || !newMapping.quantity_used || !newMapping.unit) {
       alert('Please fill in all fields');
       return;
     }
@@ -102,11 +103,12 @@ export function MealManagement() {
           meal_id: editingMeal.id,
           inventory_item_id: newMapping.inventory_item_id,
           quantity_used: parseFloat(newMapping.quantity_used),
+          unit: newMapping.unit,
         }]);
 
       if (error) throw error;
 
-      setNewMapping({ inventory_item_id: '', quantity_used: '' });
+      setNewMapping({ inventory_item_id: '', quantity_used: '', unit: 'g' });
       loadInventoryMappings(editingMeal.id);
       alert('Inventory mapping added successfully!');
     } catch (error: any) {
@@ -274,7 +276,7 @@ export function MealManagement() {
     setMealIngredients([]);
     setInventoryMappings([]);
     setNewIngredient({ ingredient_name: '', quantity: '', unit: 'grams' });
-    setNewMapping({ inventory_item_id: '', quantity_used: '' });
+    setNewMapping({ inventory_item_id: '', quantity_used: '', unit: 'g' });
     setShowForm(false);
   };
 
@@ -501,7 +503,7 @@ export function MealManagement() {
                   Link this meal to inventory items. Stock will auto-deduct when orders are placed.
                 </p>
                 <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                     <select
                       value={newMapping.inventory_item_id}
                       onChange={(e) =>
@@ -512,25 +514,36 @@ export function MealManagement() {
                       <option value="">Select inventory item</option>
                       {inventoryItems.map((item) => (
                         <option key={item.id} value={item.id}>
-                          {item.name} ({item.quantity} {item.display_unit})
+                          {item.name} ({item.quantity} {item.unit})
                         </option>
                       ))}
                     </select>
                     <input
                       type="number"
                       step="0.01"
-                      placeholder="Quantity used per meal"
+                      placeholder="Quantity"
                       value={newMapping.quantity_used}
                       onChange={(e) => setNewMapping({ ...newMapping, quantity_used: e.target.value })}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                     />
+                    <select
+                      value={newMapping.unit}
+                      onChange={(e) => setNewMapping({ ...newMapping, unit: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="pieces">Pieces</option>
+                      <option value="liters">Liters</option>
+                      <option value="ml">ml</option>
+                      <option value="g">g</option>
+                      <option value="kg">kg</option>
+                    </select>
                     <button
                       type="button"
                       onClick={handleAddInventoryMapping}
                       className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 flex items-center justify-center space-x-1"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>Add Mapping</span>
+                      <span>Add</span>
                     </button>
                   </div>
                   {inventoryMappings.length > 0 && (
@@ -541,7 +554,7 @@ export function MealManagement() {
                           className="flex items-center justify-between bg-white px-3 py-2 rounded border"
                         >
                           <span className="text-sm text-gray-700">
-                            {mapping.inventory_items?.name} - {mapping.quantity_used} {mapping.inventory_items?.unit} per meal
+                            {mapping.inventory_items?.name} - {mapping.quantity_used} {mapping.unit} per meal
                           </span>
                           <button
                             type="button"

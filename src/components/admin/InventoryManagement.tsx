@@ -248,13 +248,7 @@ export default function InventoryManagement() {
   };
 
   const formatQuantity = (item: InventoryItem): string => {
-    if (item.unit === 'grams' && item.quantity >= 1000) {
-      return `${(item.quantity / 1000).toFixed(2)} kg`;
-    }
-    if (item.unit === 'kilograms' && item.quantity < 1) {
-      return `${(item.quantity * 1000).toFixed(0)} g`;
-    }
-    return `${item.quantity} ${item.display_unit}`;
+    return `${item.quantity} ${item.unit}`;
   };
 
   const lowStockItems = items.filter(isLowStock);
@@ -369,8 +363,9 @@ export default function InventoryManagement() {
                 >
                   <option value="pieces">Pieces</option>
                   <option value="liters">Liters</option>
-                  <option value="grams">Grams</option>
-                  <option value="kilograms">Kilograms</option>
+                  <option value="ml">Milliliters (ml)</option>
+                  <option value="g">Grams (g)</option>
+                  <option value="kg">Kilograms (kg)</option>
                 </select>
               </div>
 
@@ -529,11 +524,11 @@ export default function InventoryManagement() {
                   <td className="px-6 py-4 text-gray-700">
                     {formatQuantity(item)}
                   </td>
-                  <td className="px-6 py-4 text-gray-700 capitalize">
-                    {item.display_unit}
+                  <td className="px-6 py-4 text-gray-700">
+                    {item.unit}
                   </td>
                   <td className="px-6 py-4 text-gray-700">
-                    {threshold} {item.display_unit}
+                    {threshold} {item.unit}
                     {item.custom_low_stock_threshold && (
                       <span className="ml-1 text-xs text-gray-500">(custom)</span>
                     )}

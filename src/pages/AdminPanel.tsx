@@ -30,9 +30,10 @@ import { SectionOrderManagement } from '../components/admin/SectionOrderManageme
 import { AdminCalendarView } from '../components/admin/AdminCalendarView';
 import { ActivityLogsManagement } from '../components/admin/ActivityLogsManagement';
 import { InvoiceManagement } from '../components/admin/InvoiceManagement';
+import { InvoiceSettingsManagement } from '../components/admin/InvoiceSettingsManagement';
 import { AdminManagement } from '../components/admin/AdminManagement';
 
-type AdminTab = 'dashboard' | 'calendar' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'section-order' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer' | 'invoices' | 'activity-logs' | 'admin-management';
+type AdminTab = 'dashboard' | 'calendar' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'section-order' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer' | 'invoices' | 'invoice-settings' | 'activity-logs' | 'admin-management';
 
 export function AdminPanel() {
   const navigate = useNavigate();
@@ -111,6 +112,7 @@ export function AdminPanel() {
           {activeTab === 'pages' && <PagesManagement />}
           {activeTab === 'footer' && <FooterBuilderManagement />}
           {activeTab === 'invoices' && <InvoiceManagement />}
+          {activeTab === 'invoice-settings' && <InvoiceSettingsManagement />}
           {activeTab === 'activity-logs' && <ActivityLogsManagement />}
           {activeTab === 'admin-management' && <AdminManagement />}
         </main>

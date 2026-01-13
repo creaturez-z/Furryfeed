@@ -59,6 +59,7 @@ type AdminTab =
   | 'whatsapp'
   | 'pages'
   | 'invoices'
+  | 'invoice-settings'
   | 'activity-logs'
   | 'admin-management';
 
@@ -131,6 +132,7 @@ const sidebarGroups: SidebarGroup[] = [
       { id: 'subscriptions', label: 'Subscriptions', icon: Package },
       { id: 'wallet', label: 'Wallet', icon: Wallet },
       { id: 'invoices', label: 'Invoices', icon: Receipt },
+      { id: 'invoice-settings', label: 'Invoice Settings', icon: Settings },
     ],
   },
   {

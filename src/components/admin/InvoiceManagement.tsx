@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { FileText, Download, Eye, Settings } from 'lucide-react';
+import { FileText, Download, Eye, Settings, Search } from 'lucide-react';
 import { InvoiceViewer } from '../InvoiceViewer';
 
 interface InvoiceSettings {
@@ -26,15 +26,18 @@ interface Invoice {
   total_amount: number;
   items: any[];
   customer?: { name: string; email: string; phone: string };
+  pet_names?: string[];
 }
 
 export function InvoiceManagement() {
   const [settings, setSettings] = useState<InvoiceSettings | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [editingSettings, setEditingSettings] = useState<Partial<InvoiceSettings>>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadData();
@@ -69,12 +72,30 @@ export function InvoiceManagement() {
       .from('invoices')
       .select(`
         *,
-        customer:profiles!invoices_customer_id_fkey(name, email, phone)
+        customer:profiles!invoices_customer_id_fkey(name, email, phone),
+        subscription:subscriptions(id)
       `)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    setInvoices(data || []);
+
+    const invoicesWithPets = await Promise.all(
+      (data || []).map(async (invoice) => {
+        const petNamesFromItems = invoice.items
+          ?.map((item: any) => item.pet_name)
+          .filter((name: string | undefined) => name);
+
+        const uniquePetNames = [...new Set(petNamesFromItems || [])];
+
+        return {
+          ...invoice,
+          pet_names: uniquePetNames,
+        };
+      })
+    );
+
+    setInvoices(invoicesWithPets);
+    setFilteredInvoices(invoicesWithPets);
   };
 
   const handleSaveSettings = async () => {
@@ -103,6 +124,34 @@ export function InvoiceManagement() {
     }
   };
 
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    const lowerQuery = query.toLowerCase().trim();
+
+    if (!lowerQuery) {
+      setFilteredInvoices(invoices);
+      return;
+    }
+
+    const filtered = invoices.filter((invoice) => {
+      const invoiceNumber = invoice.invoice_number?.toLowerCase() || '';
+      const customerName = invoice.customer?.name?.toLowerCase() || '';
+      const customerEmail = invoice.customer?.email?.toLowerCase() || '';
+      const customerPhone = invoice.customer?.phone?.toLowerCase() || '';
+      const petNames = (invoice.pet_names || []).join(' ').toLowerCase();
+
+      return (
+        invoiceNumber.includes(lowerQuery) ||
+        customerName.includes(lowerQuery) ||
+        customerEmail.includes(lowerQuery) ||
+        customerPhone.includes(lowerQuery) ||
+        petNames.includes(lowerQuery)
+      );
+    });
+
+    setFilteredInvoices(filtered);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -123,8 +172,21 @@ export function InvoiceManagement() {
           className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
         >
           <Settings className="w-5 h-5" />
-          <span>Invoice Settings</span>
+          <span className="hidden md:inline">Invoice Settings</span>
         </button>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-md p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search by Invoice No, Pet Name, Customer Name, Phone, or Email..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          />
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
@@ -134,25 +196,33 @@ export function InvoiceManagement() {
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Invoice #</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Customer</th>
+                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Pet Name(s)</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Date</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Amount</th>
                 <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {invoices.length === 0 ? (
+              {filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-gray-500">
-                    No invoices found
+                  <td colSpan={6} className="text-center py-8 text-gray-500">
+                    {searchQuery ? 'No invoices found matching your search' : 'No invoices found'}
                   </td>
                 </tr>
               ) : (
-                invoices.map((invoice) => (
+                filteredInvoices.map((invoice) => (
                   <tr key={invoice.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-4 px-6 font-medium text-gray-900">{invoice.invoice_number}</td>
                     <td className="py-4 px-6">
                       <div className="text-sm text-gray-900">{invoice.customer?.name}</div>
                       <div className="text-xs text-gray-500">{invoice.customer?.email || invoice.customer?.phone}</div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="text-sm text-gray-900">
+                        {invoice.pet_names && invoice.pet_names.length > 0
+                          ? invoice.pet_names.join(', ')
+                          : '-'}
+                      </div>
                     </td>
                     <td className="py-4 px-6 text-sm text-gray-700">
                       {new Date(invoice.order_date).toLocaleDateString()}

@@ -373,19 +373,6 @@ export function CouponManagement() {
                 </div>
 
                 <div>
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.is_referral}
-                      onChange={(e) => setFormData({ ...formData, is_referral: e.target.checked })}
-                      className="rounded text-orange-500 focus:ring-2 focus:ring-orange-500"
-                    />
-                    <span className="text-sm font-medium text-gray-700">Referral Coupon</span>
-                  </label>
-                  <p className="text-xs text-gray-500 mt-1">Mark this as a referral coupon (stackable with others)</p>
-                </div>
-
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Discount Type</label>
                   <select
                     value={formData.discount_type}

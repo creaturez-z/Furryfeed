@@ -33,8 +33,9 @@ import { InvoiceManagement } from '../components/admin/InvoiceManagement';
 import { InvoiceSettingsManagement } from '../components/admin/InvoiceSettingsManagement';
 import { AdminManagement } from '../components/admin/AdminManagement';
 import { CouponManagement } from '../components/admin/CouponManagement';
+import { ReferralCouponsManagement } from '../components/admin/ReferralCouponsManagement';
 
-type AdminTab = 'dashboard' | 'calendar' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'section-order' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer' | 'invoices' | 'invoice-settings' | 'activity-logs' | 'admin-management' | 'coupons';
+type AdminTab = 'dashboard' | 'calendar' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'section-order' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer' | 'invoices' | 'invoice-settings' | 'activity-logs' | 'admin-management' | 'coupons' | 'referral-coupons';
 
 export function AdminPanel() {
   const navigate = useNavigate();
@@ -117,6 +118,7 @@ export function AdminPanel() {
           {activeTab === 'activity-logs' && <ActivityLogsManagement />}
           {activeTab === 'admin-management' && <AdminManagement />}
           {activeTab === 'coupons' && <CouponManagement />}
+          {activeTab === 'referral-coupons' && <ReferralCouponsManagement />}
         </main>
       </div>
     </div>

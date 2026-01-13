@@ -14,6 +14,7 @@ type Coupon = {
   user_eligibility: 'all' | 'new_users' | 'existing_users' | 'specific_users';
   product_applicability: 'all' | 'specific_products';
   minimum_order_value: number | null;
+  is_referral: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -50,6 +51,7 @@ export function CouponManagement() {
     minimum_order_value: '',
     user_eligibility: 'all' as 'all' | 'new_users' | 'existing_users' | 'specific_users',
     product_applicability: 'all' as 'all' | 'specific_products',
+    is_referral: false,
     is_active: true,
     selectedUsers: [] as string[],
     selectedMeals: [] as string[],
@@ -112,6 +114,7 @@ export function CouponManagement() {
         minimum_order_value: coupon.minimum_order_value?.toString() || '',
         user_eligibility: coupon.user_eligibility,
         product_applicability: coupon.product_applicability,
+        is_referral: coupon.is_referral,
         is_active: coupon.is_active,
         selectedUsers: usersRes.data?.map(u => u.user_id) || [],
         selectedMeals: mealsRes.data?.map(m => m.meal_id) || [],
@@ -129,6 +132,7 @@ export function CouponManagement() {
         minimum_order_value: '',
         user_eligibility: 'all',
         product_applicability: 'all',
+        is_referral: false,
         is_active: true,
         selectedUsers: [],
         selectedMeals: [],
@@ -152,6 +156,7 @@ export function CouponManagement() {
         minimum_order_value: formData.minimum_order_value ? parseFloat(formData.minimum_order_value) : null,
         user_eligibility: formData.user_eligibility,
         product_applicability: formData.product_applicability,
+        is_referral: formData.is_referral,
         is_active: formData.is_active,
         updated_at: new Date().toISOString(),
       };
@@ -365,6 +370,19 @@ export function CouponManagement() {
                     <option value="true">Active</option>
                     <option value="false">Inactive</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_referral}
+                      onChange={(e) => setFormData({ ...formData, is_referral: e.target.checked })}
+                      className="rounded text-orange-500 focus:ring-2 focus:ring-orange-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Referral Coupon</span>
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">Mark this as a referral coupon (stackable with others)</p>
                 </div>
 
                 <div>

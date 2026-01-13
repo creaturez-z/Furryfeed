@@ -10,7 +10,7 @@ import { WhatsAppBubble } from '../components/WhatsAppBubble';
 import { PetForm } from '../components/PetForm';
 import { AnnouncementBar } from '../components/AnnouncementBar';
 import { generateInvoiceForSubscription } from '../utils/invoiceGenerator';
-import { validateCoupon, recordCouponUsage, getEligibleCoupons, getCouponsNearEligibility, Coupon, CouponValidationResult } from '../utils/couponValidator';
+import { validateCoupon, recordCouponUsage, getEligibleCoupons, getCouponsNearEligibility, validateMultipleReferralCoupons, recordMultipleCouponUsage, getReferralCouponSettings, Coupon, CouponValidationResult, MultiCouponValidationResult, ReferralCouponSettings } from '../utils/couponValidator';
 
 type Wallet = {
   id: string;
@@ -67,6 +67,9 @@ export function Subscribe() {
 
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<CouponValidationResult | null>(null);
+  const [appliedReferralCoupons, setAppliedReferralCoupons] = useState<string[]>([]);
+  const [referralCouponResult, setReferralCouponResult] = useState<MultiCouponValidationResult | null>(null);
+  const [referralSettings, setReferralSettings] = useState<ReferralCouponSettings | null>(null);
   const [couponError, setCouponError] = useState('');
   const [eligibleCoupons, setEligibleCoupons] = useState<Coupon[]>([]);
   const [showCoupons, setShowCoupons] = useState(false);
@@ -83,7 +86,13 @@ export function Subscribe() {
     }
     setStartDate(tomorrowString);
     loadData();
+    loadReferralSettings();
   }, [user, navigate]);
+
+  const loadReferralSettings = async () => {
+    const settings = await getReferralCouponSettings();
+    setReferralSettings(settings);
+  };
 
   const loadData = async () => {
     try {
@@ -296,18 +305,70 @@ export function Subscribe() {
 
     const result = await validateCoupon(couponCode, user!.id, taxCalculation?.total || subtotal, mealIds);
 
-    if (result.valid) {
-      setAppliedCoupon(result);
-      setCouponError('');
+    if (result.valid && result.coupon) {
+      if (result.coupon.is_referral) {
+        if (appliedReferralCoupons.includes(couponCode.toUpperCase())) {
+          setCouponError('This coupon is already applied');
+          return;
+        }
+
+        const newReferralCoupons = [...appliedReferralCoupons, couponCode.toUpperCase()];
+        await validateReferralCoupons(newReferralCoupons);
+      } else {
+        if (appliedReferralCoupons.length > 0) {
+          setCouponError('Cannot mix regular coupons with referral coupons');
+          return;
+        }
+        setAppliedCoupon(result);
+        setCouponError('');
+        setCouponCode('');
+      }
     } else {
-      setAppliedCoupon(null);
       setCouponError(result.error || 'Invalid coupon');
+    }
+  };
+
+  const validateReferralCoupons = async (codes: string[]) => {
+    const subtotal = calculateTotalCost();
+    const mealIds = [...new Set(calendarDays.flatMap(day => day.meals.map(m => m.mealId)))];
+
+    const result = await validateMultipleReferralCoupons(
+      codes,
+      user!.id,
+      taxCalculation?.total || subtotal,
+      mealIds
+    );
+
+    if (result.valid) {
+      setAppliedReferralCoupons(codes);
+      setReferralCouponResult(result);
+      setCouponError('');
+      setCouponCode('');
+    } else {
+      setCouponError(result.error || 'Invalid referral coupons');
     }
   };
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
     setCouponCode('');
+    setCouponError('');
+  };
+
+  const handleRemoveReferralCoupon = async (code: string) => {
+    const newCoupons = appliedReferralCoupons.filter(c => c !== code);
+    setAppliedReferralCoupons(newCoupons);
+
+    if (newCoupons.length === 0) {
+      setReferralCouponResult(null);
+    } else {
+      await validateReferralCoupons(newCoupons);
+    }
+  };
+
+  const handleClearAllReferralCoupons = () => {
+    setAppliedReferralCoupons([]);
+    setReferralCouponResult(null);
     setCouponError('');
   };
 
@@ -333,8 +394,15 @@ export function Subscribe() {
   const getFinalAmount = () => {
     const subtotal = calculateTotalCost();
     const totalWithTax = taxCalculation?.total || subtotal;
-    const discount = appliedCoupon?.discountAmount || 0;
-    return Math.max(0, totalWithTax - discount);
+    const regularDiscount = appliedCoupon?.discountAmount || 0;
+    const referralDiscount = referralCouponResult?.totalDiscount || 0;
+    return Math.max(0, totalWithTax - regularDiscount - referralDiscount);
+  };
+
+  const getTotalDiscount = () => {
+    const regularDiscount = appliedCoupon?.discountAmount || 0;
+    const referralDiscount = referralCouponResult?.totalDiscount || 0;
+    return regularDiscount + referralDiscount;
   };
 
   useEffect(() => {
@@ -480,6 +548,14 @@ export function Subscribe() {
           user!.id,
           subscription.id,
           appliedCoupon.discountAmount || 0
+        );
+      }
+
+      if (referralCouponResult && referralCouponResult.coupons.length > 0) {
+        await recordMultipleCouponUsage(
+          referralCouponResult.coupons,
+          user!.id,
+          subscription.id
         );
       }
 
@@ -1069,7 +1145,7 @@ export function Subscribe() {
                     </div>
                   )}
 
-                  {nearEligibilityCoupons.length > 0 && !appliedCoupon && (
+                  {nearEligibilityCoupons.length > 0 && !appliedCoupon && appliedReferralCoupons.length === 0 && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
                       <div className="text-xs font-medium text-blue-900 mb-2">Almost there! Add more to unlock these coupons:</div>
                       {nearEligibilityCoupons.map((coupon) => (
@@ -1090,7 +1166,50 @@ export function Subscribe() {
                     </div>
                   )}
 
-                  {!appliedCoupon ? (
+                  {appliedReferralCoupons.length > 0 && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-sm font-medium text-purple-900">
+                          Referral Coupons Applied ({appliedReferralCoupons.length})
+                        </div>
+                        <button
+                          onClick={handleClearAllReferralCoupons}
+                          className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                      {referralCouponResult?.coupons.map((item) => (
+                        <div key={item.coupon.id} className="flex items-center justify-between bg-white rounded p-2">
+                          <div className="flex-1">
+                            <div className="font-medium text-sm text-gray-900">{item.coupon.code}</div>
+                            <div className="text-xs text-gray-600">
+                              Saves ₹{item.discountAmount.toFixed(2)}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveReferralCoupon(item.coupon.code)}
+                            className="text-purple-600 hover:text-purple-700"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <div className="pt-2 border-t border-purple-200">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="font-medium text-purple-900">Total Referral Discount:</span>
+                          <span className="font-bold text-purple-900">₹{referralCouponResult?.totalDiscount.toFixed(2)}</span>
+                        </div>
+                        {referralCouponResult && referralCouponResult.remainingAmount < (taxCalculation?.total || calculateTotalCost()) && (
+                          <div className="text-xs text-purple-700 mt-1">
+                            Remaining to pay: ₹{referralCouponResult.remainingAmount.toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {!appliedCoupon && appliedReferralCoupons.length === 0 ? (
                     <div className="flex space-x-2">
                       <input
                         type="text"
@@ -1107,7 +1226,24 @@ export function Subscribe() {
                         Apply
                       </button>
                     </div>
-                  ) : (
+                  ) : appliedReferralCoupons.length > 0 && referralSettings && referralSettings.stacking_policy !== 'disabled' ? (
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        placeholder="Add another referral coupon"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                      <button
+                        onClick={handleApplyCoupon}
+                        disabled={!couponCode.trim()}
+                        className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ) : appliedCoupon ? (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Check className="w-4 h-4 text-green-600" />
@@ -1127,7 +1263,7 @@ export function Subscribe() {
                         <X className="w-5 h-5" />
                       </button>
                     </div>
-                  )}
+                  ) : null}
 
                   {couponError && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex items-center space-x-2">
@@ -1144,6 +1280,22 @@ export function Subscribe() {
                   <span className="font-medium">
                     -₹{appliedCoupon.discountAmount.toFixed(2)}
                   </span>
+                </div>
+              )}
+
+              {referralCouponResult && referralCouponResult.totalDiscount > 0 && (
+                <div className="flex justify-between items-center text-purple-600">
+                  <span className="text-gray-700">Referral Discounts:</span>
+                  <span className="font-medium">
+                    -₹{referralCouponResult.totalDiscount.toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              {getTotalDiscount() > 0 && (
+                <div className="flex justify-between items-center text-green-700 font-medium">
+                  <span>Total Savings:</span>
+                  <span>-₹{getTotalDiscount().toFixed(2)}</span>
                 </div>
               )}
 

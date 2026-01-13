@@ -12,9 +12,19 @@ export type Coupon = {
   user_eligibility: 'all' | 'new_users' | 'existing_users' | 'specific_users';
   product_applicability: 'all' | 'specific_products';
   minimum_order_value: number | null;
+  is_referral: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type ReferralCouponSettings = {
+  id: string;
+  max_coupons_per_order: number | null;
+  max_discount_percentage: number | null;
+  stacking_policy: 'enabled' | 'partial' | 'disabled';
+  updated_at: string;
+  created_at: string;
 };
 
 export type CouponValidationResult = {
@@ -22,6 +32,17 @@ export type CouponValidationResult = {
   error?: string;
   coupon?: Coupon;
   discountAmount?: number;
+};
+
+export type MultiCouponValidationResult = {
+  valid: boolean;
+  error?: string;
+  coupons: Array<{
+    coupon: Coupon;
+    discountAmount: number;
+  }>;
+  totalDiscount: number;
+  remainingAmount: number;
 };
 
 export async function validateCoupon(
@@ -260,5 +281,179 @@ export async function getCouponsNearEligibility(
   } catch (error) {
     console.error('Error fetching coupons near eligibility:', error);
     return [];
+  }
+}
+
+export async function getReferralCouponSettings(): Promise<ReferralCouponSettings | null> {
+  try {
+    const { data, error } = await supabase
+      .from('referral_coupon_settings')
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching referral coupon settings:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching referral coupon settings:', error);
+    return null;
+  }
+}
+
+export async function validateMultipleReferralCoupons(
+  couponCodes: string[],
+  userId: string,
+  totalAmount: number,
+  mealIds: string[] = []
+): Promise<MultiCouponValidationResult> {
+  try {
+    const settings = await getReferralCouponSettings();
+
+    if (!settings) {
+      return {
+        valid: false,
+        error: 'Unable to fetch referral coupon settings',
+        coupons: [],
+        totalDiscount: 0,
+        remainingAmount: totalAmount,
+      };
+    }
+
+    if (settings.stacking_policy === 'disabled') {
+      return {
+        valid: false,
+        error: 'Referral coupon stacking is currently disabled',
+        coupons: [],
+        totalDiscount: 0,
+        remainingAmount: totalAmount,
+      };
+    }
+
+    const referralCoupons: Array<{ coupon: Coupon; discountAmount: number }> = [];
+    const validationResults: CouponValidationResult[] = [];
+
+    for (const code of couponCodes) {
+      const result = await validateCoupon(code, userId, totalAmount, mealIds);
+      validationResults.push(result);
+
+      if (result.valid && result.coupon && result.coupon.is_referral) {
+        referralCoupons.push({
+          coupon: result.coupon,
+          discountAmount: result.discountAmount || 0,
+        });
+      } else if (result.valid && result.coupon && !result.coupon.is_referral) {
+        return {
+          valid: false,
+          error: `Coupon "${code}" is not a referral coupon`,
+          coupons: [],
+          totalDiscount: 0,
+          remainingAmount: totalAmount,
+        };
+      } else if (!result.valid) {
+        return {
+          valid: false,
+          error: result.error || `Invalid coupon: ${code}`,
+          coupons: [],
+          totalDiscount: 0,
+          remainingAmount: totalAmount,
+        };
+      }
+    }
+
+    if (
+      settings.max_coupons_per_order !== null &&
+      referralCoupons.length > settings.max_coupons_per_order
+    ) {
+      return {
+        valid: false,
+        error: `You can use only ${settings.max_coupons_per_order} referral ${
+          settings.max_coupons_per_order === 1 ? 'coupon' : 'coupons'
+        } per order`,
+        coupons: [],
+        totalDiscount: 0,
+        remainingAmount: totalAmount,
+      };
+    }
+
+    let totalDiscount = 0;
+    let remainingOrderValue = totalAmount;
+
+    for (const item of referralCoupons) {
+      let discount = 0;
+
+      if (item.coupon.discount_type === 'flat') {
+        discount = Math.min(item.coupon.discount_value, remainingOrderValue);
+      } else {
+        discount = (remainingOrderValue * item.coupon.discount_value) / 100;
+      }
+
+      discount = Math.round(discount * 100) / 100;
+      totalDiscount += discount;
+      remainingOrderValue -= discount;
+      item.discountAmount = discount;
+    }
+
+    const maxDiscountPercentage = settings.max_discount_percentage || 100;
+    const maxAllowedDiscount = (totalAmount * maxDiscountPercentage) / 100;
+
+    if (totalDiscount > maxAllowedDiscount) {
+      return {
+        valid: false,
+        error: `Referral discounts can cover only up to ${maxDiscountPercentage}% of order value (₹${maxAllowedDiscount.toFixed(
+          2
+        )})`,
+        coupons: [],
+        totalDiscount: 0,
+        remainingAmount: totalAmount,
+      };
+    }
+
+    const finalRemainingAmount = Math.max(0, totalAmount - totalDiscount);
+
+    return {
+      valid: true,
+      coupons: referralCoupons,
+      totalDiscount: Math.round(totalDiscount * 100) / 100,
+      remainingAmount: Math.round(finalRemainingAmount * 100) / 100,
+    };
+  } catch (error) {
+    console.error('Error validating multiple referral coupons:', error);
+    return {
+      valid: false,
+      error: 'Failed to validate referral coupons',
+      coupons: [],
+      totalDiscount: 0,
+      remainingAmount: totalAmount,
+    };
+  }
+}
+
+export async function recordMultipleCouponUsage(
+  coupons: Array<{ coupon: Coupon; discountAmount: number }>,
+  userId: string,
+  subscriptionId: string | null
+): Promise<boolean> {
+  try {
+    const usageRecords = coupons.map((item) => ({
+      coupon_id: item.coupon.id,
+      user_id: userId,
+      subscription_id: subscriptionId,
+      discount_amount: item.discountAmount,
+    }));
+
+    const { error } = await supabase.from('coupon_usage').insert(usageRecords);
+
+    if (error) {
+      console.error('Error recording multiple coupon usage:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error recording multiple coupon usage:', error);
+    return false;
   }
 }

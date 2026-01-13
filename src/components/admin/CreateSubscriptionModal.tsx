@@ -195,7 +195,8 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
   const calculateTotal = () => {
     return calendarDays.reduce((total, day) => {
       return total + day.meals.reduce((dayTotal, meal) => {
-        return dayTotal + (meal.count * meal.pricePerUnit);
+        const effectivePrice = meal.discountedPrice ?? meal.pricePerUnit;
+        return dayTotal + (meal.count * effectivePrice);
       }, 0);
     }, 0);
   };
@@ -261,6 +262,46 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
     } else {
       setSelectedItems(new Set());
     }
+  };
+
+  const updateItemDiscount = (dayIndex: number, mealIndex: number, type: string, value: number) => {
+    setCalendarDays(prev => {
+      return prev.map((day, dIdx) => {
+        if (dIdx !== dayIndex) return day;
+
+        return {
+          ...day,
+          meals: day.meals.map((meal, mIdx) => {
+            if (mIdx !== mealIndex) return meal;
+
+            if (!type || type === '') {
+              return {
+                ...meal,
+                itemDiscountType: '',
+                itemDiscountValue: 0,
+                discountedPrice: meal.pricePerUnit,
+              };
+            }
+
+            let discountedPrice = meal.pricePerUnit;
+
+            if (type === 'flat') {
+              discountedPrice = Math.max(0, meal.pricePerUnit - value);
+            } else if (type === 'percentage') {
+              const percentage = Math.min(value, 100);
+              discountedPrice = meal.pricePerUnit * (1 - percentage / 100);
+            }
+
+            return {
+              ...meal,
+              itemDiscountType: type,
+              itemDiscountValue: value,
+              discountedPrice,
+            };
+          })
+        };
+      });
+    });
   };
 
   const handleDiscountModeChange = (mode: 'bulk' | 'specific') => {

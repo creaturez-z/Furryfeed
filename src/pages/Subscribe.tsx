@@ -69,9 +69,13 @@ export function Subscribe() {
   const tomorrowString = tomorrow.toISOString().split('T')[0];
 
   useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
     setStartDate(tomorrowString);
     loadData();
-  }, []);
+  }, [user, navigate]);
 
   const loadData = async () => {
     try {

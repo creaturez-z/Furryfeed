@@ -5,10 +5,12 @@ import { Meal } from '../types/database';
 import { ArrowLeft, ShoppingCart } from 'lucide-react';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
 import { AnnouncementBar } from '../components/AnnouncementBar';
+import { useAuth } from '../contexts/AuthContext';
 
 export function MealDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [meal, setMeal] = useState<Meal | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -121,11 +123,11 @@ export function MealDetails() {
                 </div>
 
                 <button
-                  onClick={() => navigate('/subscribe', { state: { meal } })}
+                  onClick={() => user ? navigate('/subscribe', { state: { meal } }) : navigate('/auth')}
                   className="w-full bg-orange-500 text-white py-4 rounded-xl font-semibold hover:bg-orange-600 transition-colors flex items-center justify-center space-x-2"
                 >
                   <ShoppingCart className="w-5 h-5" />
-                  <span>Subscribe to this Meal</span>
+                  <span>{user ? 'Subscribe to this Meal' : 'Sign in to Subscribe'}</span>
                 </button>
               </div>
             </div>

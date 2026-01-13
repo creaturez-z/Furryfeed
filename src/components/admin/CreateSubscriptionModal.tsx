@@ -60,6 +60,7 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
   const [selectedCouponId, setSelectedCouponId] = useState('');
   const [couponValidationMessage, setCouponValidationMessage] = useState('');
 
+  const [discountMode, setDiscountMode] = useState<'bulk' | 'specific'>('specific');
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [bulkDiscountType, setBulkDiscountType] = useState<'percentage' | 'flat' | ''>('');
   const [bulkDiscountValue, setBulkDiscountValue] = useState('');
@@ -262,6 +263,28 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
     }
   };
 
+  const handleDiscountModeChange = (mode: 'bulk' | 'specific') => {
+    setDiscountMode(mode);
+
+    if (mode === 'specific') {
+      setSelectedItems(new Set());
+      setBulkDiscountType('');
+      setBulkDiscountValue('');
+    } else {
+      setCalendarDays(prev => {
+        return prev.map(day => ({
+          ...day,
+          meals: day.meals.map(meal => ({
+            ...meal,
+            itemDiscountType: '',
+            itemDiscountValue: 0,
+            discountedPrice: meal.pricePerUnit,
+          }))
+        }));
+      });
+    }
+  };
+
   const applyBulkDiscount = () => {
     if (!bulkDiscountType || !bulkDiscountValue || selectedItems.size === 0) {
       return;
@@ -302,10 +325,6 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
         };
       });
     });
-
-    setSelectedItems(new Set());
-    setBulkDiscountType('');
-    setBulkDiscountValue('');
   };
 
   const calculateFinalPrice = () => {
@@ -679,56 +698,88 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+              <div className="bg-gray-50 border border-gray-300 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Item Discount Mode</h4>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
-                      type="checkbox"
-                      checked={selectedItems.size > 0 && selectedItems.size === calendarDays.reduce((acc, day) => acc + day.meals.filter(m => m.count > 0).length, 0)}
-                      onChange={toggleSelectAll}
-                      className="w-4 h-4 text-orange-500 rounded"
+                      type="radio"
+                      name="discountMode"
+                      value="specific"
+                      checked={discountMode === 'specific'}
+                      onChange={() => handleDiscountModeChange('specific')}
+                      className="w-4 h-4 text-orange-500"
                     />
-                    Bulk Discount ({selectedItems.size} selected)
-                  </h4>
-                  {selectedItems.size > 0 && (
-                    <button
-                      onClick={() => setSelectedItems(new Set())}
-                      className="text-sm text-gray-600 hover:text-gray-900"
-                    >
-                      Clear Selection
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={bulkDiscountType}
-                    onChange={(e) => setBulkDiscountType(e.target.value as 'percentage' | 'flat' | '')}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                  >
-                    <option value="">Select Type</option>
-                    <option value="flat">Flat Amount ₹</option>
-                    <option value="percentage">Percentage %</option>
-                  </select>
-                  <input
-                    type="number"
-                    value={bulkDiscountValue}
-                    onChange={(e) => setBulkDiscountValue(e.target.value)}
-                    disabled={!bulkDiscountType}
-                    placeholder={bulkDiscountType === 'percentage' ? '0-100' : 'Amount'}
-                    min="0"
-                    max={bulkDiscountType === 'percentage' ? '100' : undefined}
-                    step={bulkDiscountType === 'percentage' ? '1' : '0.01'}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100"
-                  />
-                  <button
-                    onClick={applyBulkDiscount}
-                    disabled={!bulkDiscountType || !bulkDiscountValue || selectedItems.size === 0}
-                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                  >
-                    Apply to Selected
-                  </button>
+                    <span className="text-gray-900">Specific Item Discount</span>
+                    <span className="text-xs text-gray-500">(Edit each item individually)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="discountMode"
+                      value="bulk"
+                      checked={discountMode === 'bulk'}
+                      onChange={() => handleDiscountModeChange('bulk')}
+                      className="w-4 h-4 text-orange-500"
+                    />
+                    <span className="text-gray-900">Bulk Discount</span>
+                    <span className="text-xs text-gray-500">(Same discount for multiple items)</span>
+                  </label>
                 </div>
               </div>
+
+              {discountMode === 'bulk' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.size > 0 && selectedItems.size === calendarDays.reduce((acc, day) => acc + day.meals.filter(m => m.count > 0).length, 0)}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 text-orange-500 rounded"
+                      />
+                      Bulk Discount ({selectedItems.size} selected)
+                    </h4>
+                    {selectedItems.size > 0 && (
+                      <button
+                        onClick={() => setSelectedItems(new Set())}
+                        className="text-sm text-gray-600 hover:text-gray-900"
+                      >
+                        Clear Selection
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={bulkDiscountType}
+                      onChange={(e) => setBulkDiscountType(e.target.value as 'percentage' | 'flat' | '')}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="">Select Type</option>
+                      <option value="flat">Flat Amount ₹</option>
+                      <option value="percentage">Percentage %</option>
+                    </select>
+                    <input
+                      type="number"
+                      value={bulkDiscountValue}
+                      onChange={(e) => setBulkDiscountValue(e.target.value)}
+                      disabled={!bulkDiscountType}
+                      placeholder={bulkDiscountType === 'percentage' ? '0-100' : 'Amount'}
+                      min="0"
+                      max={bulkDiscountType === 'percentage' ? '100' : undefined}
+                      step={bulkDiscountType === 'percentage' ? '1' : '0.01'}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100"
+                    />
+                    <button
+                      onClick={applyBulkDiscount}
+                      disabled={!bulkDiscountType || !bulkDiscountValue || selectedItems.size === 0}
+                      className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    >
+                      Apply to Selected
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {calendarDays.map((day, dayIndex) => (
@@ -737,77 +788,92 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
                       {day.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </h4>
                     <div className="space-y-2">
-                      {day.meals.map((meal, mealIndex) => (
-                        <div key={`${meal.mealId}-${mealIndex}`} className="bg-white p-3 rounded-lg border border-gray-200">
-                          <div className="flex items-start gap-3 mb-2">
-                            <input
-                              type="checkbox"
-                              checked={selectedItems.has(`${dayIndex}-${mealIndex}`)}
-                              onChange={() => toggleItemSelection(dayIndex, mealIndex)}
-                              className="mt-1 w-4 h-4 text-orange-500 rounded"
-                            />
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-900">{meal.mealName}</p>
-                              <p className="text-sm text-gray-500">
-                                {meal.quantityPerUnit}g × ₹{meal.pricePerUnit.toFixed(2)}
-                                {meal.itemDiscountType && meal.itemDiscountValue && meal.itemDiscountValue > 0 && (
-                                  <>
-                                    {' '}→{' '}
-                                    <span className="text-green-600 font-medium">
-                                      ₹{(meal.discountedPrice ?? meal.pricePerUnit).toFixed(2)}
-                                    </span>
-                                  </>
-                                )}
-                              </p>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                              <button
-                                onClick={() => updateMealCount(dayIndex, mealIndex, -1)}
-                                className="p-1 hover:bg-gray-100 rounded"
-                              >
-                                <Minus className="w-4 h-4" />
-                              </button>
-                              <span className="font-semibold w-8 text-center">{meal.count}</span>
-                              <button
-                                onClick={() => updateMealCount(dayIndex, mealIndex, 1)}
-                                className="p-1 hover:bg-gray-100 rounded"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
+                      {day.meals.map((meal, mealIndex) => {
+                        const itemKey = `${dayIndex}-${mealIndex}`;
+                        const isSelectedForBulk = selectedItems.has(itemKey);
+                        const hasDiscount = meal.itemDiscountType && meal.itemDiscountValue && meal.itemDiscountValue > 0;
 
-                          <div className="flex items-center space-x-2 pt-2 border-t border-gray-100">
-                            <label className="text-xs text-gray-600 whitespace-nowrap">Item Discount:</label>
-                            <select
-                              value={meal.itemDiscountType || ''}
-                              onChange={(e) => {
-                                const type = e.target.value as 'percentage' | 'flat' | '';
-                                updateItemDiscount(dayIndex, mealIndex, type, meal.itemDiscountValue || 0);
-                              }}
-                              className="text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
-                            >
-                              <option value="">None</option>
-                              <option value="flat">Flat ₹</option>
-                              <option value="percentage">% Off</option>
-                            </select>
-                            <input
-                              type="number"
-                              value={meal.itemDiscountValue || ''}
-                              onChange={(e) => {
-                                const value = parseFloat(e.target.value) || 0;
-                                updateItemDiscount(dayIndex, mealIndex, meal.itemDiscountType || '', value);
-                              }}
-                              disabled={!meal.itemDiscountType}
-                              placeholder={meal.itemDiscountType === 'percentage' ? '0-100' : 'Amount'}
-                              min="0"
-                              max={meal.itemDiscountType === 'percentage' ? '100' : undefined}
-                              step={meal.itemDiscountType === 'percentage' ? '1' : '0.01'}
-                              className="text-xs w-20 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 disabled:bg-gray-100"
-                            />
+                        return (
+                          <div key={`${meal.mealId}-${mealIndex}`} className="bg-white p-3 rounded-lg border border-gray-200">
+                            <div className="flex items-start gap-3 mb-2">
+                              {discountMode === 'bulk' && (
+                                <input
+                                  type="checkbox"
+                                  checked={isSelectedForBulk}
+                                  onChange={() => toggleItemSelection(dayIndex, mealIndex)}
+                                  className="mt-1 w-4 h-4 text-orange-500 rounded"
+                                />
+                              )}
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-900">{meal.mealName}</p>
+                                <p className="text-sm text-gray-500">
+                                  {meal.quantityPerUnit}g × ₹{meal.pricePerUnit.toFixed(2)}
+                                  {hasDiscount && (
+                                    <>
+                                      {' '}→{' '}
+                                      <span className="text-green-600 font-medium">
+                                        ₹{(meal.discountedPrice ?? meal.pricePerUnit).toFixed(2)}
+                                      </span>
+                                    </>
+                                  )}
+                                </p>
+                                {discountMode === 'bulk' && hasDiscount && (
+                                  <p className="text-xs text-blue-600 mt-1">
+                                    Item Discount: {meal.itemDiscountType === 'percentage' ? `${meal.itemDiscountValue}%` : `₹${meal.itemDiscountValue}`} (from bulk)
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                <button
+                                  onClick={() => updateMealCount(dayIndex, mealIndex, -1)}
+                                  className="p-1 hover:bg-gray-100 rounded"
+                                >
+                                  <Minus className="w-4 h-4" />
+                                </button>
+                                <span className="font-semibold w-8 text-center">{meal.count}</span>
+                                <button
+                                  onClick={() => updateMealCount(dayIndex, mealIndex, 1)}
+                                  className="p-1 hover:bg-gray-100 rounded"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {discountMode === 'specific' && (
+                              <div className="flex items-center space-x-2 pt-2 border-t border-gray-100">
+                                <label className="text-xs text-gray-600 whitespace-nowrap">Item Discount:</label>
+                                <select
+                                  value={meal.itemDiscountType || ''}
+                                  onChange={(e) => {
+                                    const type = e.target.value as 'percentage' | 'flat' | '';
+                                    updateItemDiscount(dayIndex, mealIndex, type, meal.itemDiscountValue || 0);
+                                  }}
+                                  className="text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
+                                >
+                                  <option value="">None</option>
+                                  <option value="flat">Flat ₹</option>
+                                  <option value="percentage">% Off</option>
+                                </select>
+                                <input
+                                  type="number"
+                                  value={meal.itemDiscountValue || ''}
+                                  onChange={(e) => {
+                                    const value = parseFloat(e.target.value) || 0;
+                                    updateItemDiscount(dayIndex, mealIndex, meal.itemDiscountType || '', value);
+                                  }}
+                                  disabled={!meal.itemDiscountType}
+                                  placeholder={meal.itemDiscountType === 'percentage' ? '0-100' : 'Amount'}
+                                  min="0"
+                                  max={meal.itemDiscountType === 'percentage' ? '100' : undefined}
+                                  step={meal.itemDiscountType === 'percentage' ? '1' : '0.01'}
+                                  className="text-xs w-20 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 disabled:bg-gray-100"
+                                />
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

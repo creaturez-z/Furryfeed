@@ -8,14 +8,6 @@ export function InvoiceSettingsManagement() {
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [formData, setFormData] = useState({
-    company_name: '',
-    company_address: '',
-    phone: '',
-    gst_number: '',
-    invoice_prefix: '',
-    next_invoice_number: 1001,
-    customer_can_access: false,
-    terms_and_conditions: '',
     template_type: 'standard_a4',
     invoice_title_label: 'INVOICE',
     subtotal_label: 'Subtotal',
@@ -47,14 +39,6 @@ export function InvoiceSettingsManagement() {
       if (data) {
         setSettings(data);
         setFormData({
-          company_name: data.company_name || '',
-          company_address: data.company_address || '',
-          phone: data.phone || '',
-          gst_number: data.gst_number || '',
-          invoice_prefix: data.invoice_prefix || '',
-          next_invoice_number: data.next_invoice_number || 1001,
-          customer_can_access: data.customer_can_access || false,
-          terms_and_conditions: data.terms_and_conditions || '',
           template_type: data.template_type || 'standard_a4',
           invoice_title_label: data.invoice_title_label || 'INVOICE',
           subtotal_label: data.subtotal_label || 'Subtotal',
@@ -306,102 +290,6 @@ export function InvoiceSettingsManagement() {
           </div>
         </div>
       )}
-
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Company Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Company Name *
-            </label>
-            <input
-              type="text"
-              value={formData.company_name}
-              onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Company Address
-            </label>
-            <textarea
-              value={formData.company_address}
-              onChange={(e) => setFormData({ ...formData, company_address: e.target.value })}
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Phone
-            </label>
-            <input
-              type="text"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              GST Number
-            </label>
-            <input
-              type="text"
-              value={formData.gst_number}
-              onChange={(e) => setFormData({ ...formData, gst_number: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Invoice Prefix
-            </label>
-            <input
-              type="text"
-              value={formData.invoice_prefix}
-              onChange={(e) => setFormData({ ...formData, invoice_prefix: e.target.value })}
-              placeholder="e.g., INV-"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Next Invoice Number
-            </label>
-            <input
-              type="number"
-              value={formData.next_invoice_number}
-              onChange={(e) => setFormData({ ...formData, next_invoice_number: parseInt(e.target.value) || 1001 })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.customer_can_access}
-                onChange={(e) => setFormData({ ...formData, customer_can_access: e.target.checked })}
-                className="w-5 h-5 text-orange-500 focus:ring-orange-500 rounded"
-              />
-              <span className="text-sm font-medium text-gray-700">Allow customers to view invoices</span>
-            </label>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Terms & Conditions
-            </label>
-            <textarea
-              value={formData.terms_and_conditions}
-              onChange={(e) => setFormData({ ...formData, terms_and_conditions: e.target.value })}
-              rows={4}
-              placeholder="Enter terms and conditions for invoices..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-        </div>
-      </div>
 
       <div className="bg-white rounded-xl shadow-md p-6">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Template Selection</h3>

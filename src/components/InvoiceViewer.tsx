@@ -6,6 +6,9 @@ interface InvoiceViewerProps {
     invoice_number: string;
     order_date: string;
     subtotal: number;
+    manual_discount_amount?: number;
+    coupon_discount_amount?: number;
+    discount_description?: string;
     tax_amount: number;
     total_amount: number;
     items: any[];
@@ -193,6 +196,18 @@ export function InvoiceViewer({ invoice, settings, onClose }: InvoiceViewerProps
               <span className="text-gray-700">{labels.subtotal}:</span>
               <span className="text-gray-900 font-medium">₹{invoice.subtotal.toFixed(2)}</span>
             </div>
+            {(invoice.manual_discount_amount ?? 0) > 0 && (
+              <div className="flex justify-between py-2 text-sm">
+                <span className="text-gray-700">Manual Discount:</span>
+                <span className="text-green-600 font-medium">-₹{invoice.manual_discount_amount!.toFixed(2)}</span>
+              </div>
+            )}
+            {(invoice.coupon_discount_amount ?? 0) > 0 && (
+              <div className="flex justify-between py-2 text-sm">
+                <span className="text-gray-700">Coupon Discount:</span>
+                <span className="text-green-600 font-medium">-₹{invoice.coupon_discount_amount!.toFixed(2)}</span>
+              </div>
+            )}
             {invoice.tax_amount > 0 && (
               <div className="flex justify-between py-2 text-sm">
                 <span className="text-gray-700">{labels.gst}:</span>
@@ -267,6 +282,18 @@ export function InvoiceViewer({ invoice, settings, onClose }: InvoiceViewerProps
           <span>{labels.subtotal}:</span>
           <span>₹{invoice.subtotal.toFixed(2)}</span>
         </div>
+        {(invoice.manual_discount_amount ?? 0) > 0 && (
+          <div className="flex justify-between">
+            <span>Manual Discount:</span>
+            <span className="text-green-600">-₹{invoice.manual_discount_amount!.toFixed(2)}</span>
+          </div>
+        )}
+        {(invoice.coupon_discount_amount ?? 0) > 0 && (
+          <div className="flex justify-between">
+            <span>Coupon Discount:</span>
+            <span className="text-green-600">-₹{invoice.coupon_discount_amount!.toFixed(2)}</span>
+          </div>
+        )}
         {invoice.tax_amount > 0 && (
           <div className="flex justify-between">
             <span>{labels.gst}:</span>
@@ -351,6 +378,18 @@ export function InvoiceViewer({ invoice, settings, onClose }: InvoiceViewerProps
             <span>{labels.subtotal}:</span>
             <span>₹{invoice.subtotal.toFixed(2)}</span>
           </div>
+          {(invoice.manual_discount_amount ?? 0) > 0 && (
+            <div className="flex justify-between mb-1">
+              <span>Manual Discount:</span>
+              <span className="text-green-600">-₹{invoice.manual_discount_amount!.toFixed(2)}</span>
+            </div>
+          )}
+          {(invoice.coupon_discount_amount ?? 0) > 0 && (
+            <div className="flex justify-between mb-1">
+              <span>Coupon Discount:</span>
+              <span className="text-green-600">-₹{invoice.coupon_discount_amount!.toFixed(2)}</span>
+            </div>
+          )}
           {invoice.tax_amount > 0 && (
             <div className="flex justify-between mb-1">
               <span>{labels.gst}:</span>

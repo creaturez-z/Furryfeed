@@ -153,8 +153,31 @@ export function SubscriptionDetailsView({ subscriptionId, onClose, canViewInvoic
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Daily Price</p>
-                  <p className="font-semibold text-orange-600">₹{subscription.calculated_price?.toFixed(2)}</p>
+                  <p className="text-sm text-gray-600 mb-1">
+                    {((subscription as any).manual_discount_type || (subscription as any).applied_coupon_id) ? 'Original Price' : 'Daily Price'}
+                  </p>
+                  <p className={`font-semibold ${((subscription as any).manual_discount_type || (subscription as any).applied_coupon_id) ? 'text-gray-600 line-through' : 'text-orange-600'}`}>
+                    ₹{subscription.calculated_price?.toFixed(2)}
+                  </p>
+                  {((subscription as any).manual_discount_type || (subscription as any).applied_coupon_id) && (
+                    <>
+                      {(subscription as any).manual_discount_type && (
+                        <p className="text-xs text-green-600 mt-1">
+                          Manual: -{(subscription as any).manual_discount_type === 'percentage'
+                            ? `${(subscription as any).manual_discount_value}%`
+                            : `₹${(subscription as any).manual_discount_value}`}
+                        </p>
+                      )}
+                      {(subscription as any).applied_coupon_id && (
+                        <p className="text-xs text-green-600">
+                          Coupon: -₹{((subscription as any).coupon_discount_amount || 0).toFixed(2)}
+                        </p>
+                      )}
+                      <p className="font-semibold text-orange-600 mt-1">
+                        Final: ₹{((subscription as any).final_price || subscription.calculated_price)?.toFixed(2)}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

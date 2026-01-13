@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { X, Calendar, Plus, Minus } from 'lucide-react';
+import { X, Calendar, Plus, Minus, Tag, Percent } from 'lucide-react';
 import { ProfileWithEmail, Pet, Meal, WeightSlab } from '../../types/database';
 import { generateInvoiceForSubscription } from '../../utils/invoiceGenerator';
 import { logActivity } from '../../utils/activityLogger';
@@ -26,12 +26,22 @@ interface CalendarDay {
   meals: DailyMeal[];
 }
 
+interface Coupon {
+  id: string;
+  code: string;
+  discount_type: 'flat' | 'percentage';
+  discount_value: number;
+  minimum_order_value: number | null;
+  is_active: boolean;
+}
+
 export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustomerId }: CreateSubscriptionModalProps) {
   const { profile } = useAuth();
   const [customers, setCustomers] = useState<ProfileWithEmail[]>([]);
   const [pets, setPets] = useState<Pet[]>([]);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [weightSlabs, setWeightSlabs] = useState<WeightSlab[]>([]);
+  const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState(preselectedCustomerId || '');
   const [selectedPetId, setSelectedPetId] = useState('');
@@ -43,6 +53,12 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
   const [currentStep, setCurrentStep] = useState<'selection' | 'calendar'>('selection');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const [manualDiscountType, setManualDiscountType] = useState<'percentage' | 'flat' | ''>('');
+  const [manualDiscountValue, setManualDiscountValue] = useState('');
+  const [manualDiscountAppliesTo, setManualDiscountAppliesTo] = useState<'total' | 'specific_items'>('total');
+  const [selectedCouponId, setSelectedCouponId] = useState('');
+  const [couponValidationMessage, setCouponValidationMessage] = useState('');
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -61,10 +77,11 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
 
   const loadData = async () => {
     try {
-      const [customersRes, mealsRes, slabsRes] = await Promise.all([
+      const [customersRes, mealsRes, slabsRes, couponsRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('role', 'customer').order('name'),
         supabase.from('meals').select('*').eq('is_active', true).order('name'),
         supabase.from('weight_slabs').select('*').order('min_weight'),
+        supabase.from('coupons').select('id, code, discount_type, discount_value, minimum_order_value, is_active').eq('is_active', true).order('code'),
       ]);
 
       if (customersRes.error) throw customersRes.error;
@@ -74,6 +91,7 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
       setCustomers(customersRes.data || []);
       setMeals(mealsRes.data || []);
       setWeightSlabs(slabsRes.data || []);
+      setAvailableCoupons(couponsRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -177,6 +195,75 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
     }, 0);
   };
 
+  const calculateManualDiscount = (subtotal: number): number => {
+    if (!manualDiscountType || !manualDiscountValue) return 0;
+
+    const value = parseFloat(manualDiscountValue);
+    if (isNaN(value) || value <= 0) return 0;
+
+    if (manualDiscountType === 'flat') {
+      return Math.min(value, subtotal);
+    } else if (manualDiscountType === 'percentage') {
+      const percentage = Math.min(value, 100);
+      return (subtotal * percentage) / 100;
+    }
+
+    return 0;
+  };
+
+  const calculateCouponDiscount = (subtotal: number): number => {
+    if (!selectedCouponId) return 0;
+
+    const coupon = availableCoupons.find(c => c.id === selectedCouponId);
+    if (!coupon) return 0;
+
+    if (coupon.minimum_order_value && subtotal < coupon.minimum_order_value) {
+      return 0;
+    }
+
+    if (coupon.discount_type === 'flat') {
+      return Math.min(coupon.discount_value, subtotal);
+    } else {
+      const percentage = Math.min(coupon.discount_value, 100);
+      return (subtotal * percentage) / 100;
+    }
+  };
+
+  const calculateFinalPrice = () => {
+    const subtotal = calculateTotal();
+    const manualDiscount = calculateManualDiscount(subtotal);
+    const couponDiscount = calculateCouponDiscount(subtotal - manualDiscount);
+    return Math.max(0, subtotal - manualDiscount - couponDiscount);
+  };
+
+  const validateCoupon = (couponId: string) => {
+    const coupon = availableCoupons.find(c => c.id === couponId);
+    if (!coupon) {
+      setCouponValidationMessage('Coupon not found');
+      return false;
+    }
+
+    const subtotal = calculateTotal();
+    const manualDiscount = calculateManualDiscount(subtotal);
+    const afterManualDiscount = subtotal - manualDiscount;
+
+    if (coupon.minimum_order_value && afterManualDiscount < coupon.minimum_order_value) {
+      setCouponValidationMessage(`Minimum order value is ₹${coupon.minimum_order_value}`);
+      return false;
+    }
+
+    setCouponValidationMessage('Coupon is valid');
+    return true;
+  };
+
+  useEffect(() => {
+    if (selectedCouponId) {
+      validateCoupon(selectedCouponId);
+    } else {
+      setCouponValidationMessage('');
+    }
+  }, [selectedCouponId, manualDiscountValue, calendarDays]);
+
   const handleCreateSubscription = async () => {
     if (!selectedCustomerId || !selectedPetId || calendarDays.length === 0) {
       setError('Missing required information');
@@ -187,7 +274,10 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
     setError('');
 
     try {
-      const totalAmount = calculateTotal();
+      const subtotalAmount = calculateTotal();
+      const manualDiscount = calculateManualDiscount(subtotalAmount);
+      const couponDiscount = calculateCouponDiscount(subtotalAmount - manualDiscount);
+      const finalPrice = calculateFinalPrice();
       const firstMeal = calendarDays.find(d => d.meals.length > 0)?.meals[0];
       if (!firstMeal) throw new Error('No meals configured');
 
@@ -199,8 +289,14 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
           meal_id: firstMeal.mealId,
           subscription_type: 'daily',
           quantity: firstMeal.quantityPerUnit,
-          calculated_price: totalAmount,
-          subtotal_amount: totalAmount,
+          calculated_price: subtotalAmount,
+          subtotal_amount: subtotalAmount,
+          manual_discount_type: manualDiscountType || null,
+          manual_discount_value: manualDiscountValue ? parseFloat(manualDiscountValue) : null,
+          manual_discount_applies_to: manualDiscountType ? manualDiscountAppliesTo : null,
+          applied_coupon_id: selectedCouponId || null,
+          coupon_discount_amount: couponDiscount,
+          final_price: finalPrice,
           delivery_address: deliveryAddress,
           status: 'active',
           start_date: startDate,
@@ -410,8 +506,98 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
               </button>
 
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-gray-900 mb-2">Subscription Summary</h3>
-                <p className="text-sm text-gray-600">Total: ₹{calculateTotal().toFixed(2)}</p>
+                <h3 className="font-semibold text-gray-900 mb-3">Subscription Pricing</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="font-medium text-gray-900">₹{calculateTotal().toFixed(2)}</span>
+                  </div>
+                  {manualDiscountType && manualDiscountValue && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Manual Discount ({manualDiscountType === 'percentage' ? `${manualDiscountValue}%` : `₹${manualDiscountValue}`}):</span>
+                      <span className="font-medium text-green-600">-₹{calculateManualDiscount(calculateTotal()).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {selectedCouponId && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Coupon Discount:</span>
+                      <span className="font-medium text-green-600">-₹{calculateCouponDiscount(calculateTotal() - calculateManualDiscount(calculateTotal())).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="pt-2 border-t border-gray-300 flex justify-between">
+                    <span className="font-semibold text-gray-900">Final Total:</span>
+                    <span className="font-bold text-lg text-orange-600">₹{calculateFinalPrice().toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+                <h3 className="font-semibold text-gray-900 flex items-center space-x-2">
+                  <Tag className="w-5 h-5 text-orange-500" />
+                  <span>Apply Discounts (Admin Only)</span>
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Manual Discount</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <select
+                        value={manualDiscountType}
+                        onChange={(e) => setManualDiscountType(e.target.value as any)}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                      >
+                        <option value="">None</option>
+                        <option value="percentage">Percentage</option>
+                        <option value="flat">Flat Amount</option>
+                      </select>
+                      <input
+                        type="number"
+                        value={manualDiscountValue}
+                        onChange={(e) => setManualDiscountValue(e.target.value)}
+                        disabled={!manualDiscountType}
+                        placeholder={manualDiscountType === 'percentage' ? '0-100' : 'Amount'}
+                        min="0"
+                        max={manualDiscountType === 'percentage' ? '100' : undefined}
+                        step={manualDiscountType === 'percentage' ? '1' : '0.01'}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100"
+                      />
+                      <select
+                        value={manualDiscountAppliesTo}
+                        onChange={(e) => setManualDiscountAppliesTo(e.target.value as any)}
+                        disabled={!manualDiscountType}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100"
+                      >
+                        <option value="total">Total</option>
+                        <option value="specific_items">Specific Items</option>
+                      </select>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {manualDiscountType === 'percentage' ? 'Enter percentage (0-100%)' : manualDiscountType === 'flat' ? 'Enter flat amount in ₹' : 'Select discount type'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Apply Coupon</label>
+                    <select
+                      value={selectedCouponId}
+                      onChange={(e) => setSelectedCouponId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="">No Coupon</option>
+                      {availableCoupons.map(coupon => (
+                        <option key={coupon.id} value={coupon.id}>
+                          {coupon.code} - {coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : `₹${coupon.discount_value}`}
+                          {coupon.minimum_order_value ? ` (Min: ₹${coupon.minimum_order_value})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {couponValidationMessage && (
+                      <p className={`text-xs mt-1 ${couponValidationMessage.includes('valid') ? 'text-green-600' : 'text-red-600'}`}>
+                        {couponValidationMessage}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-4 max-h-96 overflow-y-auto">

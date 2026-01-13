@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Pet } from '../types/database';
@@ -10,12 +10,26 @@ interface PetFormProps {
   onCancel: () => void;
 }
 
+const calculateAge = (birthDate: string): number => {
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+
+  return Math.max(0, age);
+};
+
 export function PetForm({ pet, onSuccess, onCancel }: PetFormProps) {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: pet?.name || '',
     breed: pet?.breed || '',
+    birth_date: (pet as any)?.birth_date || '',
     age: pet?.age || 1,
     weight_in_kg: pet?.weight_in_kg || pet?.weight ? pet.weight / 1000 : 0,
     medical_condition: pet?.medical_condition || '',
@@ -27,6 +41,13 @@ export function PetForm({ pet, onSuccess, onCancel }: PetFormProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(pet?.image_url || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (formData.birth_date) {
+      const calculatedAge = calculateAge(formData.birth_date);
+      setFormData(prev => ({ ...prev, age: calculatedAge }));
+    }
+  }, [formData.birth_date]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -103,6 +124,7 @@ export function PetForm({ pet, onSuccess, onCancel }: PetFormProps) {
       const petData = {
         name: formData.name,
         breed: formData.breed,
+        birth_date: formData.birth_date || null,
         age: formData.age,
         weight: Math.round(formData.weight_in_kg * 1000),
         weight_in_kg: formData.weight_in_kg,
@@ -244,6 +266,22 @@ export function PetForm({ pet, onSuccess, onCancel }: PetFormProps) {
           </div>
 
           <div>
+            <label htmlFor="birth_date" className="block text-sm font-medium text-gray-700 mb-1">
+              Birth Date {formData.birth_date ? '*' : '(Optional)'}
+            </label>
+            <input
+              type="date"
+              id="birth_date"
+              name="birth_date"
+              value={formData.birth_date}
+              onChange={handleChange}
+              max={new Date().toISOString().split('T')[0]}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+            <p className="text-xs text-gray-500 mt-1">Age will be calculated automatically</p>
+          </div>
+
+          <div>
             <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-1">
               Age (years) *
             </label>
@@ -256,8 +294,17 @@ export function PetForm({ pet, onSuccess, onCancel }: PetFormProps) {
               required
               min="0"
               step="1"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              readOnly={!!formData.birth_date}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                formData.birth_date ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
             />
+            {formData.birth_date && (
+              <p className="text-xs text-blue-600 mt-1">Calculated from birth date</p>
+            )}
+            {!formData.birth_date && (
+              <p className="text-xs text-gray-500 mt-1">Or enter birth date above for auto-calculation</p>
+            )}
           </div>
 
           <div>

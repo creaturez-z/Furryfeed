@@ -38,6 +38,7 @@ type AdminTab =
   | 'dashboard'
   | 'calendar'
   | 'meals'
+  | 'inventory'
   | 'meal-layout'
   | 'weight-slabs'
   | 'tax-config'
@@ -98,6 +99,7 @@ const sidebarGroups: SidebarGroup[] = [
     label: 'Meals & Pricing',
     items: [
       { id: 'meals', label: 'Meals', icon: UtensilsCrossed },
+      { id: 'inventory', label: 'Inventory', icon: Package },
       { id: 'meal-layout', label: 'Meal Layout', icon: Grid },
       { id: 'weight-slabs', label: 'Weight Slabs', icon: Weight },
       { id: 'tax-config', label: 'Tax Config', icon: Receipt },

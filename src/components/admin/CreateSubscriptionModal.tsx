@@ -479,6 +479,22 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
         }
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const uniqueDates = [...new Set(calendarDays.map(d => d.dateString))];
+        for (const date of uniqueDates) {
+          const { error: deductError } = await supabase.rpc('deduct_inventory_for_order', {
+            p_subscription_id: subscription.id,
+            p_order_date: date,
+            p_created_by: user.id,
+          });
+
+          if (deductError) {
+            console.error('Error deducting inventory:', deductError);
+          }
+        }
+      }
+
       await generateInvoiceForSubscription(subscription.id, selectedCustomerId);
 
       if (profile) {

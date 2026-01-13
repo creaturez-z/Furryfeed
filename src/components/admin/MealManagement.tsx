@@ -10,6 +10,12 @@ export function MealManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [mealIngredients, setMealIngredients] = useState<MealIngredient[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [inventoryMappings, setInventoryMappings] = useState<any[]>([]);
+  const [newMapping, setNewMapping] = useState({
+    inventory_item_id: '',
+    quantity_used: '',
+  });
   const [newIngredient, setNewIngredient] = useState({
     ingredient_name: '',
     quantity: '',
@@ -35,16 +41,19 @@ export function MealManagement() {
 
   const loadData = async () => {
     try {
-      const [mealsRes, categoriesRes] = await Promise.all([
+      const [mealsRes, categoriesRes, inventoryRes] = await Promise.all([
         supabase.from('meals').select('*').order('created_at', { ascending: false }),
         supabase.from('categories').select('*').eq('is_active', true).order('name'),
+        supabase.from('inventory_items').select('*').order('name'),
       ]);
 
       if (mealsRes.error) throw mealsRes.error;
       if (categoriesRes.error) throw categoriesRes.error;
+      if (inventoryRes.error) throw inventoryRes.error;
 
       setMeals(mealsRes.data || []);
       setCategories(categoriesRes.data || []);
+      setInventoryItems(inventoryRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -63,6 +72,65 @@ export function MealManagement() {
       setMealIngredients(data || []);
     } catch (error) {
       console.error('Error loading ingredients:', error);
+    }
+  };
+
+  const loadInventoryMappings = async (mealId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('meal_inventory_mapping')
+        .select('*, inventory_items(name, unit)')
+        .eq('meal_id', mealId);
+
+      if (error) throw error;
+      setInventoryMappings(data || []);
+    } catch (error) {
+      console.error('Error loading inventory mappings:', error);
+    }
+  };
+
+  const handleAddInventoryMapping = async () => {
+    if (!editingMeal || !newMapping.inventory_item_id || !newMapping.quantity_used) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('meal_inventory_mapping')
+        .insert([{
+          meal_id: editingMeal.id,
+          inventory_item_id: newMapping.inventory_item_id,
+          quantity_used: parseFloat(newMapping.quantity_used),
+        }]);
+
+      if (error) throw error;
+
+      setNewMapping({ inventory_item_id: '', quantity_used: '' });
+      loadInventoryMappings(editingMeal.id);
+      alert('Inventory mapping added successfully!');
+    } catch (error: any) {
+      console.error('Error adding inventory mapping:', error);
+      alert('Error: ' + error.message);
+    }
+  };
+
+  const handleDeleteInventoryMapping = async (mappingId: string) => {
+    try {
+      const { error } = await supabase
+        .from('meal_inventory_mapping')
+        .delete()
+        .eq('id', mappingId);
+
+      if (error) throw error;
+
+      if (editingMeal) {
+        loadInventoryMappings(editingMeal.id);
+      }
+      alert('Inventory mapping deleted successfully!');
+    } catch (error: any) {
+      console.error('Error deleting inventory mapping:', error);
+      alert('Error: ' + error.message);
     }
   };
 
@@ -157,6 +225,7 @@ export function MealManagement() {
       is_active: meal.is_active,
     });
     await loadMealIngredients(meal.id);
+    await loadInventoryMappings(meal.id);
     setShowForm(true);
   };
 
@@ -203,7 +272,9 @@ export function MealManagement() {
     });
     setEditingMeal(null);
     setMealIngredients([]);
+    setInventoryMappings([]);
     setNewIngredient({ ingredient_name: '', quantity: '', unit: 'grams' });
+    setNewMapping({ inventory_item_id: '', quantity_used: '' });
     setShowForm(false);
   };
 
@@ -418,6 +489,75 @@ export function MealManagement() {
                         </div>
                       ))}
                     </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {editingMeal && (
+              <div className="border-t pt-4 mt-4">
+                <h4 className="text-lg font-semibold text-gray-900 mb-3">Inventory Mapping</h4>
+                <p className="text-sm text-gray-600 mb-3">
+                  Link this meal to inventory items. Stock will auto-deduct when orders are placed.
+                </p>
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <select
+                      value={newMapping.inventory_item_id}
+                      onChange={(e) =>
+                        setNewMapping({ ...newMapping, inventory_item_id: e.target.value })
+                      }
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="">Select inventory item</option>
+                      {inventoryItems.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name} ({item.quantity} {item.display_unit})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Quantity used per meal"
+                      value={newMapping.quantity_used}
+                      onChange={(e) => setNewMapping({ ...newMapping, quantity_used: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddInventoryMapping}
+                      className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 flex items-center justify-center space-x-1"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Mapping</span>
+                    </button>
+                  </div>
+                  {inventoryMappings.length > 0 && (
+                    <div className="space-y-2">
+                      {inventoryMappings.map((mapping) => (
+                        <div
+                          key={mapping.id}
+                          className="flex items-center justify-between bg-white px-3 py-2 rounded border"
+                        >
+                          <span className="text-sm text-gray-700">
+                            {mapping.inventory_items?.name} - {mapping.quantity_used} {mapping.inventory_items?.unit} per meal
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteInventoryMapping(mapping.id)}
+                            className="text-red-600 hover:bg-red-50 p-1 rounded"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {inventoryMappings.length === 0 && (
+                    <p className="text-sm text-gray-500 text-center py-2">
+                      No inventory items linked yet
+                    </p>
                   )}
                 </div>
               </div>

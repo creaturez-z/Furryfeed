@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { FileText, Download, Eye, Settings, Search } from 'lucide-react';
+import { FileText, Eye, Search, Trash2 } from 'lucide-react';
 import { InvoiceViewer } from '../InvoiceViewer';
 
 interface InvoiceSettings {
@@ -34,10 +34,9 @@ export function InvoiceManagement() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [editingSettings, setEditingSettings] = useState<Partial<InvoiceSettings>>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -98,29 +97,27 @@ export function InvoiceManagement() {
     setFilteredInvoices(invoicesWithPets);
   };
 
-  const handleSaveSettings = async () => {
+  const handleDeleteInvoice = async (invoiceId: string) => {
+    if (!confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+      return;
+    }
+
     try {
-      if (!settings?.id) {
-        const { error } = await supabase
-          .from('invoice_settings')
-          .insert(editingSettings);
+      setDeletingId(invoiceId);
+      const { error } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', invoiceId);
 
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('invoice_settings')
-          .update({ ...editingSettings, updated_at: new Date().toISOString() })
-          .eq('id', settings.id);
+      if (error) throw error;
 
-        if (error) throw error;
-      }
-
-      await loadSettings();
-      setShowSettings(false);
-      alert('Settings saved successfully');
+      await loadInvoices();
+      alert('Invoice deleted successfully');
     } catch (error) {
-      console.error('Error saving settings:', error);
-      alert('Failed to save settings');
+      console.error('Error deleting invoice:', error);
+      alert('Failed to delete invoice');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -167,13 +164,6 @@ export function InvoiceManagement() {
           <FileText className="w-6 h-6" />
           <span>Invoice Management</span>
         </h2>
-        <button
-          onClick={() => setShowSettings(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-        >
-          <Settings className="w-5 h-5" />
-          <span className="hidden md:inline">Invoice Settings</span>
-        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-md p-4">
@@ -236,10 +226,18 @@ export function InvoiceManagement() {
                       <div className="flex justify-end space-x-2">
                         <button
                           onClick={() => setSelectedInvoice(invoice)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="View Invoice"
                         >
                           <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteInvoice(invoice.id)}
+                          disabled={deletingId === invoice.id}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Delete Invoice"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -250,113 +248,6 @@ export function InvoiceManagement() {
           </table>
         </div>
       </div>
-
-      {showSettings && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Invoice Settings</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Name *</label>
-                  <input
-                    type="text"
-                    value={editingSettings.company_name || ''}
-                    onChange={(e) => setEditingSettings({ ...editingSettings, company_name: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Address</label>
-                  <textarea
-                    value={editingSettings.company_address || ''}
-                    onChange={(e) => setEditingSettings({ ...editingSettings, company_address: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                    <input
-                      type="text"
-                      value={editingSettings.phone || ''}
-                      onChange={(e) => setEditingSettings({ ...editingSettings, phone: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">GST Number</label>
-                    <input
-                      type="text"
-                      value={editingSettings.gst_number || ''}
-                      onChange={(e) => setEditingSettings({ ...editingSettings, gst_number: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Invoice Prefix</label>
-                    <input
-                      type="text"
-                      value={editingSettings.invoice_prefix || ''}
-                      onChange={(e) => setEditingSettings({ ...editingSettings, invoice_prefix: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Next Invoice Number</label>
-                    <input
-                      type="number"
-                      value={editingSettings.next_invoice_number || 1001}
-                      onChange={(e) => setEditingSettings({ ...editingSettings, next_invoice_number: parseInt(e.target.value) })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={editingSettings.customer_can_access || false}
-                      onChange={(e) => setEditingSettings({ ...editingSettings, customer_can_access: e.target.checked })}
-                      className="w-5 h-5 text-orange-500 focus:ring-orange-500 rounded"
-                    />
-                    <span className="text-sm font-medium text-gray-700">Allow customers to view invoices</span>
-                  </label>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Terms & Conditions</label>
-                  <textarea
-                    value={editingSettings.terms_and_conditions || ''}
-                    onChange={(e) => setEditingSettings({ ...editingSettings, terms_and_conditions: e.target.value })}
-                    rows={4}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-              </div>
-              <div className="flex space-x-3 mt-6">
-                <button
-                  onClick={handleSaveSettings}
-                  className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-                >
-                  Save Settings
-                </button>
-                <button
-                  onClick={() => {
-                    setShowSettings(false);
-                    setEditingSettings(settings || {});
-                  }}
-                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {selectedInvoice && settings && (
         <InvoiceViewer

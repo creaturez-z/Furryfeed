@@ -3,13 +3,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Meal, Pet, WeightSlab, Profile } from '../types/database';
-import { ArrowLeft, Wallet as WalletIcon, AlertCircle, Calendar as CalendarIcon, Copy, Check, Plus } from 'lucide-react';
+import { ArrowLeft, Wallet as WalletIcon, AlertCircle, Calendar as CalendarIcon, Copy, Check, Plus, Tag, X } from 'lucide-react';
 import { calculateSubscriptionTax, TaxCalculation } from '../utils/tax';
 import { ensureWalletExists } from '../utils/wallet';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
 import { PetForm } from '../components/PetForm';
 import { AnnouncementBar } from '../components/AnnouncementBar';
 import { generateInvoiceForSubscription } from '../utils/invoiceGenerator';
+import { validateCoupon, recordCouponUsage, getEligibleCoupons, Coupon, CouponValidationResult } from '../utils/couponValidator';
 
 type Wallet = {
   id: string;
@@ -63,6 +64,12 @@ export function Subscribe() {
   const [error, setError] = useState('');
   const [showWalletWarning, setShowWalletWarning] = useState(false);
   const [taxCalculation, setTaxCalculation] = useState<TaxCalculation | null>(null);
+
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponValidationResult | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [eligibleCoupons, setEligibleCoupons] = useState<Coupon[]>([]);
+  const [showCoupons, setShowCoupons] = useState(false);
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -276,6 +283,52 @@ export function Subscribe() {
     return subtotal;
   };
 
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+
+    setCouponError('');
+    const subtotal = calculateTotalCost();
+    const mealIds = [...new Set(calendarDays.flatMap(day => day.meals.map(m => m.mealId)))];
+
+    const result = await validateCoupon(couponCode, user!.id, taxCalculation?.total || subtotal, mealIds);
+
+    if (result.valid) {
+      setAppliedCoupon(result);
+      setCouponError('');
+    } else {
+      setAppliedCoupon(null);
+      setCouponError(result.error || 'Invalid coupon');
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError('');
+  };
+
+  const loadEligibleCoupons = async () => {
+    const mealIds = [...new Set(calendarDays.flatMap(day => day.meals.map(m => m.mealId)))];
+    const coupons = await getEligibleCoupons(user!.id, mealIds);
+    setEligibleCoupons(coupons);
+  };
+
+  useEffect(() => {
+    if (user && calendarDays.length > 0) {
+      loadEligibleCoupons();
+    }
+  }, [user, calendarDays]);
+
+  const getFinalAmount = () => {
+    const subtotal = calculateTotalCost();
+    const totalWithTax = taxCalculation?.total || subtotal;
+    const discount = appliedCoupon?.discountAmount || 0;
+    return Math.max(0, totalWithTax - discount);
+  };
+
   useEffect(() => {
     const loadTaxCalculation = async () => {
       if (calendarDays.length === 0) {
@@ -314,7 +367,7 @@ export function Subscribe() {
     }
 
     const subtotal = calculateTotalCost();
-    const finalAmount = taxCalculation?.total || subtotal;
+    const finalAmount = getFinalAmount();
 
     if (!wallet) {
       setError('Could not load wallet');
@@ -412,6 +465,15 @@ export function Subscribe() {
       if (transactionError) throw transactionError;
 
       await generateInvoiceForSubscription(subscription.id, user!.id);
+
+      if (appliedCoupon && appliedCoupon.coupon) {
+        await recordCouponUsage(
+          appliedCoupon.coupon.id,
+          user!.id,
+          subscription.id,
+          appliedCoupon.discountAmount || 0
+        );
+      }
 
       setPetsWithSubscriptions(prev => [...prev, selectedPetId]);
 
@@ -956,11 +1018,111 @@ export function Subscribe() {
                   </span>
                 </div>
               )}
+
+              <div className="border-t border-orange-200 pt-3 mt-3">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700 flex items-center space-x-2">
+                      <Tag className="w-4 h-4" />
+                      <span>Have a coupon code?</span>
+                    </label>
+                    {eligibleCoupons.length > 0 && (
+                      <button
+                        onClick={() => setShowCoupons(!showCoupons)}
+                        className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                      >
+                        {showCoupons ? 'Hide' : 'View'} {eligibleCoupons.length} available {eligibleCoupons.length === 1 ? 'coupon' : 'coupons'}
+                      </button>
+                    )}
+                  </div>
+
+                  {showCoupons && eligibleCoupons.length > 0 && (
+                    <div className="bg-white rounded-lg p-3 space-y-2 max-h-32 overflow-y-auto">
+                      {eligibleCoupons.map((coupon) => (
+                        <button
+                          key={coupon.id}
+                          onClick={() => {
+                            setCouponCode(coupon.code);
+                            setShowCoupons(false);
+                          }}
+                          className="w-full flex items-center justify-between p-2 hover:bg-orange-50 rounded transition-colors text-left"
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium text-sm text-gray-900">{coupon.code}</div>
+                            <div className="text-xs text-gray-600">
+                              {coupon.discount_type === 'percentage'
+                                ? `${coupon.discount_value}% off`
+                                : `₹${coupon.discount_value} off`}
+                            </div>
+                          </div>
+                          <div className="text-xs text-orange-600">Apply</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {!appliedCoupon ? (
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        placeholder="Enter coupon code"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                      <button
+                        onClick={handleApplyCoupon}
+                        disabled={!couponCode.trim()}
+                        className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-600" />
+                        <div>
+                          <div className="text-sm font-medium text-green-900">
+                            Coupon "{appliedCoupon.coupon?.code}" applied
+                          </div>
+                          <div className="text-xs text-green-700">
+                            You save ₹{appliedCoupon.discountAmount?.toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleRemoveCoupon}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+
+                  {couponError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex items-center space-x-2">
+                      <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                      <span className="text-sm text-red-800">{couponError}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {appliedCoupon && appliedCoupon.discountAmount && appliedCoupon.discountAmount > 0 && (
+                <div className="flex justify-between items-center text-green-600">
+                  <span className="text-gray-700">Coupon Discount:</span>
+                  <span className="font-medium">
+                    -₹{appliedCoupon.discountAmount.toFixed(2)}
+                  </span>
+                </div>
+              )}
+
               <div className="border-t border-orange-200 pt-2">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold text-gray-900">Total Amount:</span>
                   <span className="text-3xl font-bold text-orange-500">
-                    ₹{(taxCalculation?.total || subtotal).toFixed(2)}
+                    ₹{getFinalAmount().toFixed(2)}
                   </span>
                 </div>
               </div>

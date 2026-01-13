@@ -30,6 +30,7 @@ import {
   Calendar,
   Shield,
   Activity,
+  Tag,
 } from 'lucide-react';
 
 type AdminTab =
@@ -61,7 +62,8 @@ type AdminTab =
   | 'invoices'
   | 'invoice-settings'
   | 'activity-logs'
-  | 'admin-management';
+  | 'admin-management'
+  | 'coupons';
 
 interface SidebarGroup {
   id: string;
@@ -147,6 +149,7 @@ const sidebarGroups: SidebarGroup[] = [
     label: 'Marketing & Communication',
     items: [
       { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+      { id: 'coupons', label: 'Coupons', icon: Tag },
     ],
   },
   {

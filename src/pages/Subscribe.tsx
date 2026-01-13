@@ -95,6 +95,10 @@ export function Subscribe() {
       setWeightSlabs(weightSlabsRes.data || []);
       setProfile(profileRes.data);
 
+      if (profileRes.data?.delivery_address) {
+        setDeliveryAddress(profileRes.data.delivery_address);
+      }
+
       if (profileRes.data?.is_banned) {
         setError('Your account is temporarily restricted. Please contact support.');
         return;

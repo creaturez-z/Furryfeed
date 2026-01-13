@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Meal, Banner, BannerSettings, MealLayoutConfig } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
-import { ShoppingBag, User, LogOut, Settings } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Settings, LogIn } from 'lucide-react';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
 import { CustomFooter } from '../components/CustomFooter';
 import { DynamicMenu } from '../components/DynamicMenu';
@@ -20,7 +20,7 @@ interface SectionLayout {
 
 export function Landing() {
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [allMeals, setAllMeals] = useState<Meal[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -291,31 +291,43 @@ export function Landing() {
               <DynamicMenu />
             </div>
             <div className="flex items-center space-x-4">
-              {profile?.role === 'admin' && (
+              {!user ? (
                 <button
-                  onClick={() => navigate('/admin')}
+                  onClick={() => navigate('/auth')}
                   className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                 >
-                  <Settings className="w-5 h-5" />
-                  <span className="hidden sm:inline">Admin Panel</span>
+                  <LogIn className="w-5 h-5" />
+                  <span className="hidden sm:inline">Login</span>
                 </button>
+              ) : (
+                <>
+                  {profile?.role === 'admin' && (
+                    <button
+                      onClick={() => navigate('/admin')}
+                      className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                    >
+                      <Settings className="w-5 h-5" />
+                      <span className="hidden sm:inline">Admin Panel</span>
+                    </button>
+                  )}
+                  {profile?.role === 'customer' && (
+                    <button
+                      onClick={() => navigate('/dashboard')}
+                      className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-orange-500 transition-colors"
+                    >
+                      <User className="w-5 h-5" />
+                      <span className="hidden sm:inline">Dashboard</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-red-500 transition-colors"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span className="hidden sm:inline">Logout</span>
+                  </button>
+                </>
               )}
-              {profile?.role === 'customer' && (
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-orange-500 transition-colors"
-                >
-                  <User className="w-5 h-5" />
-                  <span className="hidden sm:inline">Dashboard</span>
-                </button>
-              )}
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-red-500 transition-colors"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
             </div>
           </div>
           <div className="lg:hidden border-t border-gray-200 py-3">

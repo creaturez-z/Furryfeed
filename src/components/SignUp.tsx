@@ -14,6 +14,7 @@ export function SignUp({ onToggle }: SignUpProps) {
     alternativePhone: '',
     email: '',
     alternativeEmail: '',
+    deliveryAddress: '',
     password: '',
     confirmPassword: '',
   });
@@ -37,6 +38,7 @@ export function SignUp({ onToggle }: SignUpProps) {
         phone: formData.phone,
         alternative_phone: formData.alternativePhone || undefined,
         alternative_email: formData.alternativeEmail || undefined,
+        delivery_address: formData.deliveryAddress,
       });
     } catch (err) {
       setError('Failed to create account. Please try again.');
@@ -140,6 +142,22 @@ export function SignUp({ onToggle }: SignUpProps) {
               value={formData.alternativeEmail}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="deliveryAddress" className="block text-sm font-medium text-gray-700 mb-1">
+              Delivery Address *
+            </label>
+            <textarea
+              id="deliveryAddress"
+              name="deliveryAddress"
+              value={formData.deliveryAddress}
+              onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
+              required
+              rows={3}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+              placeholder="Enter your complete delivery address"
             />
           </div>
 

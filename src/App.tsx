@@ -65,19 +65,11 @@ function AppRoutes() {
       />
       <Route
         path="/"
-        element={
-          <ProtectedRoute>
-            <Landing />
-          </ProtectedRoute>
-        }
+        element={<Landing />}
       />
       <Route
         path="/meals/:id"
-        element={
-          <ProtectedRoute>
-            <MealDetails />
-          </ProtectedRoute>
-        }
+        element={<MealDetails />}
       />
       <Route
         path="/dashboard"

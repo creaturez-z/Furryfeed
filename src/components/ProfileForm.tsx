@@ -13,6 +13,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     phone: profile.phone,
     alternative_phone: profile.alternative_phone || '',
     alternative_email: profile.alternative_email || '',
+    delivery_address: profile.delivery_address || '',
   });
   const [passwordData, setPasswordData] = useState({
     newPassword: '',
@@ -51,7 +52,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -178,6 +179,24 @@ export function ProfileForm({ profile }: ProfileFormProps) {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="delivery_address" className="block text-sm font-medium text-gray-700 mb-1">
+            Delivery Address
+          </label>
+          <textarea
+            id="delivery_address"
+            name="delivery_address"
+            value={formData.delivery_address}
+            onChange={handleChange}
+            rows={3}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+            placeholder="Enter your complete delivery address"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            This address will be used as default for all your subscriptions
+          </p>
         </div>
 
         <button

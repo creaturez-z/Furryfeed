@@ -4,6 +4,7 @@ export interface Profile {
   phone: string;
   alternative_phone?: string;
   alternative_email?: string;
+  delivery_address?: string;
   role: 'customer' | 'admin' | 'kitchen_staff' | 'delivery_person';
   is_banned?: boolean;
   banned_at?: string;

@@ -27,34 +27,55 @@ export async function generateInvoiceForSubscription(
       .select(`
         *,
         meal:meals(*),
-        pet:pets(*),
-        subscription_pets(pet:pets(*)),
-        subscription_items(meal:meals(*), quantity, price)
+        pet:pets(*)
       `)
       .eq('id', subscriptionId)
       .single();
 
     if (subError) throw subError;
 
+    const { data: dailyItems, error: dailyItemsError } = await supabase
+      .from('subscription_daily_items')
+      .select(`
+        *,
+        meal:meals(name),
+        pet:pets(name)
+      `)
+      .eq('subscription_id', subscriptionId);
+
+    if (dailyItemsError) {
+      console.error('Error fetching daily items:', dailyItemsError);
+    }
+
     const invoiceNumber = `${settings.invoice_prefix}${settings.next_invoice_number}`;
 
     const items: InvoiceItem[] = [];
 
-    if (subscription.subscription_items && subscription.subscription_items.length > 0) {
-      subscription.subscription_items.forEach((item: any) => {
-        const petNames = subscription.subscription_pets?.map((sp: any) => sp.pet?.name).join(', ') || 'Multiple Pets';
-        items.push({
-          name: item.meal?.name || 'Unknown Meal',
-          pet_name: petNames,
-          quantity: item.quantity,
-          price: item.price,
-          total: item.price,
-        });
+    if (dailyItems && dailyItems.length > 0) {
+      const itemsMap = new Map<string, InvoiceItem>();
+
+      dailyItems.forEach((item: any) => {
+        const key = `${item.meal_id}-${item.pet_id}`;
+
+        if (itemsMap.has(key)) {
+          const existingItem = itemsMap.get(key)!;
+          existingItem.total += item.price;
+        } else {
+          itemsMap.set(key, {
+            name: item.meal?.name || 'Unknown Meal',
+            pet_name: item.pet?.name || 'Unknown Pet',
+            quantity: item.quantity,
+            price: item.price,
+            total: item.price,
+          });
+        }
       });
+
+      items.push(...Array.from(itemsMap.values()));
     } else {
       items.push({
         name: subscription.meal?.name || 'Unknown Meal',
-        pet_name: subscription.pet?.name,
+        pet_name: subscription.pet?.name || 'Unknown Pet',
         quantity: subscription.quantity || 0,
         price: subscription.calculated_price || 0,
         total: subscription.calculated_price || 0,

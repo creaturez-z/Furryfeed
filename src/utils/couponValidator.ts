@@ -11,6 +11,7 @@ export type Coupon = {
   per_user_usage_limit: number | null;
   user_eligibility: 'all' | 'new_users' | 'existing_users' | 'specific_users';
   product_applicability: 'all' | 'specific_products';
+  minimum_order_value: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -125,6 +126,14 @@ export async function validateCoupon(
       }
     }
 
+    if (coupon.minimum_order_value !== null && totalAmount < coupon.minimum_order_value) {
+      const shortfall = coupon.minimum_order_value - totalAmount;
+      return {
+        valid: false,
+        error: `Minimum order value of ₹${coupon.minimum_order_value.toFixed(2)} required. Add ₹${shortfall.toFixed(2)} more to use this coupon.`
+      };
+    }
+
     let discountAmount = 0;
     if (coupon.discount_type === 'flat') {
       discountAmount = Math.min(coupon.discount_value, totalAmount);
@@ -171,7 +180,7 @@ export async function recordCouponUsage(
   }
 }
 
-export async function getEligibleCoupons(userId: string, mealIds: string[] = []): Promise<Coupon[]> {
+export async function getEligibleCoupons(userId: string, mealIds: string[] = [], currentOrderValue: number = 10000): Promise<Coupon[]> {
   try {
     const today = new Date().toISOString().split('T')[0];
 
@@ -190,7 +199,7 @@ export async function getEligibleCoupons(userId: string, mealIds: string[] = [])
     const eligibleCoupons: Coupon[] = [];
 
     for (const coupon of coupons) {
-      const validation = await validateCoupon(coupon.code, userId, 1000, mealIds);
+      const validation = await validateCoupon(coupon.code, userId, currentOrderValue, mealIds);
       if (validation.valid) {
         eligibleCoupons.push(coupon);
       }
@@ -199,6 +208,57 @@ export async function getEligibleCoupons(userId: string, mealIds: string[] = [])
     return eligibleCoupons;
   } catch (error) {
     console.error('Error fetching eligible coupons:', error);
+    return [];
+  }
+}
+
+export async function getCouponsNearEligibility(
+  userId: string,
+  currentOrderValue: number,
+  mealIds: string[] = []
+): Promise<Array<Coupon & { amountNeeded: number }>> {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    const { data: coupons, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .eq('is_active', true)
+      .lte('start_date', today)
+      .gte('expiry_date', today)
+      .not('minimum_order_value', 'is', null)
+      .gt('minimum_order_value', currentOrderValue)
+      .order('minimum_order_value', { ascending: true });
+
+    if (error || !coupons) {
+      return [];
+    }
+
+    const nearEligibilityCoupons: Array<Coupon & { amountNeeded: number }> = [];
+
+    for (const coupon of coupons) {
+      const amountNeeded = (coupon.minimum_order_value || 0) - currentOrderValue;
+
+      if (amountNeeded > 0 && amountNeeded <= 500) {
+        const baseValidation = await validateCoupon(
+          coupon.code,
+          userId,
+          coupon.minimum_order_value || 0,
+          mealIds
+        );
+
+        if (baseValidation.valid || baseValidation.error?.includes('Minimum order value')) {
+          nearEligibilityCoupons.push({
+            ...coupon,
+            amountNeeded,
+          });
+        }
+      }
+    }
+
+    return nearEligibilityCoupons.slice(0, 3);
+  } catch (error) {
+    console.error('Error fetching coupons near eligibility:', error);
     return [];
   }
 }

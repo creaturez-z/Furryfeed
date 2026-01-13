@@ -10,7 +10,7 @@ import { WhatsAppBubble } from '../components/WhatsAppBubble';
 import { PetForm } from '../components/PetForm';
 import { AnnouncementBar } from '../components/AnnouncementBar';
 import { generateInvoiceForSubscription } from '../utils/invoiceGenerator';
-import { validateCoupon, recordCouponUsage, getEligibleCoupons, Coupon, CouponValidationResult } from '../utils/couponValidator';
+import { validateCoupon, recordCouponUsage, getEligibleCoupons, getCouponsNearEligibility, Coupon, CouponValidationResult } from '../utils/couponValidator';
 
 type Wallet = {
   id: string;
@@ -70,6 +70,7 @@ export function Subscribe() {
   const [couponError, setCouponError] = useState('');
   const [eligibleCoupons, setEligibleCoupons] = useState<Coupon[]>([]);
   const [showCoupons, setShowCoupons] = useState(false);
+  const [nearEligibilityCoupons, setNearEligibilityCoupons] = useState<Array<Coupon & { amountNeeded: number }>>([]);
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -312,15 +313,22 @@ export function Subscribe() {
 
   const loadEligibleCoupons = async () => {
     const mealIds = [...new Set(calendarDays.flatMap(day => day.meals.map(m => m.mealId)))];
-    const coupons = await getEligibleCoupons(user!.id, mealIds);
+    const currentOrderValue = taxCalculation?.total || calculateTotalCost();
+
+    const [coupons, nearCoupons] = await Promise.all([
+      getEligibleCoupons(user!.id, mealIds, currentOrderValue),
+      getCouponsNearEligibility(user!.id, currentOrderValue, mealIds)
+    ]);
+
     setEligibleCoupons(coupons);
+    setNearEligibilityCoupons(nearCoupons);
   };
 
   useEffect(() => {
     if (user && calendarDays.length > 0) {
       loadEligibleCoupons();
     }
-  }, [user, calendarDays]);
+  }, [user, calendarDays, taxCalculation]);
 
   const getFinalAmount = () => {
     const subtotal = calculateTotalCost();
@@ -1057,6 +1065,27 @@ export function Subscribe() {
                           </div>
                           <div className="text-xs text-orange-600">Apply</div>
                         </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {nearEligibilityCoupons.length > 0 && !appliedCoupon && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                      <div className="text-xs font-medium text-blue-900 mb-2">Almost there! Add more to unlock these coupons:</div>
+                      {nearEligibilityCoupons.map((coupon) => (
+                        <div key={coupon.id} className="flex items-center justify-between text-sm">
+                          <div className="flex-1">
+                            <div className="font-medium text-blue-900">{coupon.code}</div>
+                            <div className="text-xs text-blue-700">
+                              {coupon.discount_type === 'percentage'
+                                ? `${coupon.discount_value}% off`
+                                : `₹${coupon.discount_value} off`}
+                            </div>
+                          </div>
+                          <div className="text-xs font-medium text-blue-900">
+                            Add ₹{coupon.amountNeeded.toFixed(2)} more
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}

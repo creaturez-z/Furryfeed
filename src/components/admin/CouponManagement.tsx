@@ -13,6 +13,7 @@ type Coupon = {
   per_user_usage_limit: number | null;
   user_eligibility: 'all' | 'new_users' | 'existing_users' | 'specific_users';
   product_applicability: 'all' | 'specific_products';
+  minimum_order_value: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -46,6 +47,7 @@ export function CouponManagement() {
     expiry_date: '',
     total_usage_limit: '',
     per_user_usage_limit: '',
+    minimum_order_value: '',
     user_eligibility: 'all' as 'all' | 'new_users' | 'existing_users' | 'specific_users',
     product_applicability: 'all' as 'all' | 'specific_products',
     is_active: true,
@@ -107,6 +109,7 @@ export function CouponManagement() {
         expiry_date: coupon.expiry_date,
         total_usage_limit: coupon.total_usage_limit?.toString() || '',
         per_user_usage_limit: coupon.per_user_usage_limit?.toString() || '',
+        minimum_order_value: coupon.minimum_order_value?.toString() || '',
         user_eligibility: coupon.user_eligibility,
         product_applicability: coupon.product_applicability,
         is_active: coupon.is_active,
@@ -123,6 +126,7 @@ export function CouponManagement() {
         expiry_date: '',
         total_usage_limit: '',
         per_user_usage_limit: '',
+        minimum_order_value: '',
         user_eligibility: 'all',
         product_applicability: 'all',
         is_active: true,
@@ -145,6 +149,7 @@ export function CouponManagement() {
         expiry_date: formData.expiry_date,
         total_usage_limit: formData.total_usage_limit ? parseInt(formData.total_usage_limit) : null,
         per_user_usage_limit: formData.per_user_usage_limit ? parseInt(formData.per_user_usage_limit) : null,
+        minimum_order_value: formData.minimum_order_value ? parseFloat(formData.minimum_order_value) : null,
         user_eligibility: formData.user_eligibility,
         product_applicability: formData.product_applicability,
         is_active: formData.is_active,
@@ -305,6 +310,12 @@ export function CouponManagement() {
                 <span className="capitalize">{coupon.product_applicability.replace('_', ' ')}</span>
               </div>
 
+              {coupon.minimum_order_value && (
+                <div className="flex items-center space-x-2 text-gray-600">
+                  <span className="text-sm">Min. order: ₹{coupon.minimum_order_value.toFixed(2)}</span>
+                </div>
+              )}
+
               <div className="mt-3 pt-3 border-t">
                 <span
                   className={`inline-block px-2 py-1 rounded text-xs font-medium ${
@@ -428,6 +439,21 @@ export function CouponManagement() {
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
                     placeholder="Unlimited"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Minimum Order Value (optional)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.minimum_order_value}
+                    onChange={(e) => setFormData({ ...formData, minimum_order_value: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    placeholder="No minimum"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Coupon applies only if order value meets this amount</p>
                 </div>
               </div>
 

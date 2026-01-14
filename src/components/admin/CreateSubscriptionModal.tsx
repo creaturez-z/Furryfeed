@@ -526,22 +526,24 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
 
       await generateInvoiceForSubscription(subscription.id, selectedCustomerId);
 
-      const walletDeduction = await debitWallet(
-        selectedCustomerId,
-        finalPrice,
-        `Subscription ${subscription.id}`,
-        'subscription_charge'
-      );
+      try {
+        await debitWallet(
+          selectedCustomerId,
+          finalPrice,
+          `Subscription ${subscription.id}`,
+          'subscription_charge',
+          subscription.id
+        );
 
-      if (walletDeduction.success) {
         await creditSubscriptionWallet(
           selectedCustomerId,
           finalPrice,
           subscription.id,
           `Credit from main wallet for subscription ${subscription.id}`
         );
-      } else {
-        console.error('Failed to deduct from main wallet:', walletDeduction.error);
+      } catch (walletError: any) {
+        console.error('Failed to deduct from main wallet:', walletError);
+        throw new Error(`Wallet deduction failed: ${walletError.message}`);
       }
 
       if (profile) {

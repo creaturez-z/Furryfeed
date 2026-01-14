@@ -61,41 +61,41 @@ export function AdminManagement() {
     e.preventDefault();
 
     try {
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            name: formData.name,
-            phone: formData.phone,
-            role: formData.role,
-          },
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-admin-users`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          action: 'create',
+          email: formData.email,
+          password: formData.password,
+          name: formData.name,
+          phone: formData.phone,
+          role: formData.role,
+        }),
       });
 
-      if (signUpError) throw signUpError;
+      const result = await response.json();
 
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            name: formData.name,
-            phone: formData.phone,
-            role: formData.role,
-          })
-          .eq('id', authData.user.id);
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create admin user');
+      }
 
-        if (profileError) throw profileError;
-
-        if (profile) {
-          await logActivity(
-            profile.name,
-            `Created new ${formData.role} user: ${formData.name}`,
-            'user',
-            authData.user.id,
-            'profile'
-          );
-        }
+      if (profile) {
+        await logActivity(
+          profile.name,
+          `Created new ${formData.role} user: ${formData.name}`,
+          'user',
+          result.user?.id || 'unknown',
+          'profile'
+        );
       }
 
       alert('Admin user created successfully');
@@ -125,31 +125,32 @@ export function AdminManagement() {
     if (!editingAdmin) return;
 
     try {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-admin-users`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'update',
+          userId: editingAdmin.id,
+          email: editFormData.email !== editingAdmin.email ? editFormData.email : undefined,
+          password: editFormData.password || undefined,
           name: editFormData.name,
           phone: editFormData.phone,
           role: editFormData.role,
-        })
-        .eq('id', editingAdmin.id);
+        }),
+      });
 
-      if (profileError) throw profileError;
+      const result = await response.json();
 
-      if (editFormData.email !== editingAdmin.email) {
-        const { error: emailError } = await supabase.auth.admin.updateUserById(
-          editingAdmin.id,
-          { email: editFormData.email }
-        );
-        if (emailError) throw emailError;
-      }
-
-      if (editFormData.password) {
-        const { error: passwordError } = await supabase.auth.admin.updateUserById(
-          editingAdmin.id,
-          { password: editFormData.password }
-        );
-        if (passwordError) throw passwordError;
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update admin user');
       }
 
       if (profile) {

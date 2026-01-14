@@ -66,7 +66,9 @@ type AdminTab =
   | 'activity-logs'
   | 'admin-management'
   | 'coupons'
-  | 'referral-coupons';
+  | 'referral-coupons'
+  | 'payment-settings'
+  | 'payment-verification';
 
 interface SidebarGroup {
   id: string;
@@ -137,6 +139,8 @@ const sidebarGroups: SidebarGroup[] = [
       { id: 'customers', label: 'Customers', icon: Users },
       { id: 'subscriptions', label: 'Subscriptions', icon: Package },
       { id: 'wallet', label: 'Wallet', icon: Wallet },
+      { id: 'payment-verification', label: 'Payment Verification', icon: Receipt },
+      { id: 'payment-settings', label: 'Payment Settings', icon: Settings },
       { id: 'invoices', label: 'Invoices', icon: Receipt },
       { id: 'invoice-settings', label: 'Invoice Settings', icon: Settings },
     ],

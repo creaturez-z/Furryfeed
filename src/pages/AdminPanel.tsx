@@ -35,8 +35,10 @@ import { AdminManagement } from '../components/admin/AdminManagement';
 import { CouponManagement } from '../components/admin/CouponManagement';
 import { ReferralCouponsManagement } from '../components/admin/ReferralCouponsManagement';
 import InventoryManagement from '../components/admin/InventoryManagement';
+import PaymentSettingsManagement from '../components/admin/PaymentSettingsManagement';
+import ManualPaymentVerification from '../components/admin/ManualPaymentVerification';
 
-type AdminTab = 'dashboard' | 'calendar' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'section-order' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer' | 'invoices' | 'invoice-settings' | 'activity-logs' | 'admin-management' | 'coupons' | 'referral-coupons' | 'inventory';
+type AdminTab = 'dashboard' | 'calendar' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'section-order' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer' | 'invoices' | 'invoice-settings' | 'activity-logs' | 'admin-management' | 'coupons' | 'referral-coupons' | 'inventory' | 'payment-settings' | 'payment-verification';
 
 export function AdminPanel() {
   const navigate = useNavigate();
@@ -121,6 +123,8 @@ export function AdminPanel() {
           {activeTab === 'admin-management' && <AdminManagement />}
           {activeTab === 'coupons' && <CouponManagement />}
           {activeTab === 'referral-coupons' && <ReferralCouponsManagement />}
+          {activeTab === 'payment-settings' && <PaymentSettingsManagement />}
+          {activeTab === 'payment-verification' && <ManualPaymentVerification />}
         </main>
       </div>
     </div>

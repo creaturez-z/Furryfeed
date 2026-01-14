@@ -11,6 +11,7 @@ import { WhatsAppBubble } from '../components/WhatsAppBubble';
 import { AnnouncementBar } from '../components/AnnouncementBar';
 import { SubscriptionCalendarView } from '../components/SubscriptionCalendarView';
 import { SubscriptionDetailsView } from '../components/SubscriptionDetailsView';
+import PaymentModal from '../components/PaymentModal';
 
 type Tab = 'subscriptions' | 'pets' | 'profile';
 
@@ -30,6 +31,8 @@ export function Dashboard() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPetForm, setShowPetForm] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedSubscriptionForPayment, setSelectedSubscriptionForPayment] = useState<EnrichedSubscription | null>(null);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
   const [showCalendarView, setShowCalendarView] = useState(false);
   const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string | null>(null);
@@ -340,7 +343,23 @@ export function Dashboard() {
                               <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(sub.status)}`}>
                                 {sub.status}
                               </span>
+                              {(sub as any).payment_status === 'pending_payment' && (
+                                <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                                  Payment Pending
+                                </span>
+                              )}
                               <div className="flex flex-col gap-2">
+                                {(sub as any).payment_status === 'pending_payment' && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSubscriptionForPayment(sub);
+                                      setShowPaymentModal(true);
+                                    }}
+                                    className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700"
+                                  >
+                                    Complete Payment
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => {
                                     setDetailsSubscriptionId(sub.id);
@@ -576,6 +595,21 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {showPaymentModal && selectedSubscriptionForPayment && (
+        <PaymentModal
+          subscriptionId={selectedSubscriptionForPayment.id}
+          amount={selectedSubscriptionForPayment.calculated_price}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedSubscriptionForPayment(null);
+          }}
+          onSuccess={() => {
+            loadSubscriptions();
+            loadWallet();
+          }}
+        />
       )}
 
       <WhatsAppBubble pageType="customer" />

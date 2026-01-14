@@ -11,6 +11,7 @@ import { PetForm } from '../components/PetForm';
 import { AnnouncementBar } from '../components/AnnouncementBar';
 import { generateInvoiceForSubscription } from '../utils/invoiceGenerator';
 import { validateCoupon, recordCouponUsage, getEligibleCoupons, getCouponsNearEligibility, validateMultipleReferralCoupons, recordMultipleCouponUsage, getReferralCouponSettings, Coupon, CouponValidationResult, MultiCouponValidationResult, ReferralCouponSettings } from '../utils/couponValidator';
+import PaymentModal from '../components/PaymentModal';
 
 type Wallet = {
   id: string;
@@ -63,6 +64,9 @@ export function Subscribe() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showWalletWarning, setShowWalletWarning] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingSubscriptionId, setPendingSubscriptionId] = useState<string | null>(null);
+  const [pendingPaymentAmount, setPendingPaymentAmount] = useState(0);
   const [taxCalculation, setTaxCalculation] = useState<TaxCalculation | null>(null);
 
   const [couponCode, setCouponCode] = useState('');
@@ -450,13 +454,7 @@ export function Subscribe() {
       return;
     }
 
-    if (wallet.balance < finalAmount) {
-      setShowWalletWarning(true);
-      setError(
-        `Insufficient wallet balance. You need ₹${finalAmount.toFixed(2)} but only have ₹${wallet.balance.toFixed(2)}.`
-      );
-      return;
-    }
+    const hasInsufficientBalance = wallet.balance < finalAmount;
 
     setLoading(true);
 
@@ -481,7 +479,9 @@ export function Subscribe() {
           tax_percentage: taxCalculation?.taxPercentage,
           tax_amount: taxCalculation?.taxAmount || 0,
           delivery_address: deliveryAddress,
-          status: 'active',
+          status: hasInsufficientBalance ? 'inactive' : 'active',
+          payment_status: hasInsufficientBalance ? 'pending_payment' : 'paid',
+          payment_method: hasInsufficientBalance ? null : 'wallet',
           start_date: startDate,
           end_date: endDate,
           selected_weekdays: null,
@@ -521,26 +521,28 @@ export function Subscribe() {
         }
       }
 
-      const newBalance = wallet.balance - finalAmount;
-      const { error: walletError } = await supabase
-        .from('wallets')
-        .update({ balance: newBalance, updated_at: new Date().toISOString() })
-        .eq('id', wallet.id);
+      if (!hasInsufficientBalance) {
+        const newBalance = wallet.balance - finalAmount;
+        const { error: walletError } = await supabase
+          .from('wallets')
+          .update({ balance: newBalance, updated_at: new Date().toISOString() })
+          .eq('id', wallet.id);
 
-      if (walletError) throw walletError;
+        if (walletError) throw walletError;
 
-      const { error: transactionError } = await supabase.from('wallet_transactions').insert({
-        wallet_id: wallet.id,
-        customer_id: user!.id,
-        type: 'debit',
-        amount: finalAmount,
-        reason: `Subscription for ${pet.name}`,
-        reference_type: 'subscription_charge',
-      });
+        const { error: transactionError } = await supabase.from('wallet_transactions').insert({
+          wallet_id: wallet.id,
+          customer_id: user!.id,
+          type: 'debit',
+          amount: finalAmount,
+          reason: `Subscription for ${pet.name}`,
+          reference_type: 'subscription_charge',
+        });
 
-      if (transactionError) throw transactionError;
+        if (transactionError) throw transactionError;
 
-      await generateInvoiceForSubscription(subscription.id, user!.id);
+        await generateInvoiceForSubscription(subscription.id, user!.id);
+      }
 
       if (appliedCoupon && appliedCoupon.coupon) {
         await recordCouponUsage(
@@ -561,7 +563,11 @@ export function Subscribe() {
 
       setPetsWithSubscriptions(prev => [...prev, selectedPetId]);
 
-      if (pets.length > 1 && pets.some(p => !petsWithSubscriptions.includes(p.id) && p.id !== selectedPetId)) {
+      if (hasInsufficientBalance) {
+        setPendingSubscriptionId(subscription.id);
+        setPendingPaymentAmount(finalAmount);
+        setShowPaymentModal(true);
+      } else if (pets.length > 1 && pets.some(p => !petsWithSubscriptions.includes(p.id) && p.id !== selectedPetId)) {
         setShowReplicateModal(true);
       } else {
         navigate('/dashboard');
@@ -1439,6 +1445,20 @@ export function Subscribe() {
             </div>
           </div>
         </div>
+      )}
+
+      {showPaymentModal && pendingSubscriptionId && (
+        <PaymentModal
+          subscriptionId={pendingSubscriptionId}
+          amount={pendingPaymentAmount}
+          onClose={() => {
+            setShowPaymentModal(false);
+            navigate('/dashboard');
+          }}
+          onSuccess={() => {
+            loadWallet();
+          }}
+        />
       )}
 
       <WhatsAppBubble pageType="customer" />

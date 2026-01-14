@@ -16,7 +16,7 @@ interface ManualPaymentTransaction {
   reviewed_at: string | null;
   created_at: string;
   profiles: {
-    full_name: string;
+    name: string;
     email: string;
   };
   subscriptions: {
@@ -47,7 +47,7 @@ export default function ManualPaymentVerification() {
         .select(
           `
           *,
-          profiles!manual_payment_transactions_user_id_fkey(full_name, email),
+          profiles!manual_payment_transactions_user_id_fkey(name, email),
           subscriptions(id, status)
         `
         )
@@ -249,7 +249,7 @@ export default function ManualPaymentVerification() {
                       <User className="w-4 h-4 text-gray-400" />
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {transaction.profiles?.full_name || 'N/A'}
+                          {transaction.profiles?.name || 'N/A'}
                         </div>
                         <div className="text-xs text-gray-500">{transaction.profiles?.email}</div>
                       </div>
@@ -312,7 +312,7 @@ export default function ManualPaymentVerification() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-gray-500">Customer Name</label>
-                    <p className="font-medium">{selectedTransaction.profiles?.full_name}</p>
+                    <p className="font-medium">{selectedTransaction.profiles?.name}</p>
                   </div>
                   <div>
                     <label className="text-sm text-gray-500">Email</label>

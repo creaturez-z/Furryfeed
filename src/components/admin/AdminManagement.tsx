@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { UserPlus, Shield, User, Trash2 } from 'lucide-react';
+import { UserPlus, Shield, User, Trash2, Edit2 } from 'lucide-react';
 import { logActivity } from '../../utils/activityLogger';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -18,7 +18,16 @@ export function AdminManagement() {
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
   const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'admin' as 'admin' | 'super_admin',
+  });
+  const [editFormData, setEditFormData] = useState({
     name: '',
     email: '',
     phone: '',
@@ -96,6 +105,71 @@ export function AdminManagement() {
     } catch (error: any) {
       console.error('Error creating admin:', error);
       alert(error.message || 'Failed to create admin user');
+    }
+  };
+
+  const handleEditAdmin = (admin: AdminUser) => {
+    setEditingAdmin(admin);
+    setEditFormData({
+      name: admin.name,
+      email: admin.email,
+      phone: admin.phone,
+      password: '',
+      role: admin.role as 'admin' | 'super_admin',
+    });
+    setShowEditForm(true);
+  };
+
+  const handleUpdateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAdmin) return;
+
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          name: editFormData.name,
+          phone: editFormData.phone,
+          role: editFormData.role,
+        })
+        .eq('id', editingAdmin.id);
+
+      if (profileError) throw profileError;
+
+      if (editFormData.email !== editingAdmin.email) {
+        const { error: emailError } = await supabase.auth.admin.updateUserById(
+          editingAdmin.id,
+          { email: editFormData.email }
+        );
+        if (emailError) throw emailError;
+      }
+
+      if (editFormData.password) {
+        const { error: passwordError } = await supabase.auth.admin.updateUserById(
+          editingAdmin.id,
+          { password: editFormData.password }
+        );
+        if (passwordError) throw passwordError;
+      }
+
+      if (profile) {
+        await logActivity(
+          profile.name,
+          `Updated admin user: ${editFormData.name}`,
+          'user',
+          editingAdmin.id,
+          'profile'
+        );
+      }
+
+      alert('Admin updated successfully');
+      setShowEditForm(false);
+      setEditingAdmin(null);
+      setEditFormData({ name: '', email: '', phone: '', password: '', role: 'admin' });
+      loadAdmins();
+    } catch (error: any) {
+      console.error('Error updating admin:', error);
+      alert(error.message || 'Failed to update admin user');
     }
   };
 
@@ -199,7 +273,14 @@ export function AdminManagement() {
                       {new Date(admin.created_at).toLocaleDateString()}
                     </td>
                     <td className="py-4 px-6">
-                      <div className="flex justify-end">
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => handleEditAdmin(admin)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          title="Edit Admin"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleDeleteAdmin(admin.id, admin.name)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
@@ -286,6 +367,87 @@ export function AdminManagement() {
                   onClick={() => {
                     setShowCreateForm(false);
                     setFormData({ name: '', email: '', phone: '', password: '', role: 'admin' });
+                  }}
+                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditForm && editingAdmin && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Edit Admin User</h3>
+            <form onSubmit={handleUpdateAdmin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <input
+                  type="password"
+                  minLength={6}
+                  value={editFormData.password}
+                  onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  placeholder="Leave blank to keep current password"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Role *</label>
+                <select
+                  value={editFormData.role}
+                  onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value as 'admin' | 'super_admin' })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="super_admin">Super Admin</option>
+                </select>
+              </div>
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  Update Admin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setEditingAdmin(null);
+                    setEditFormData({ name: '', email: '', phone: '', password: '', role: 'admin' });
                   }}
                   className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
                 >

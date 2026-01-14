@@ -5,6 +5,8 @@ import { ProfileWithEmail, Pet, Meal, WeightSlab } from '../../types/database';
 import { generateInvoiceForSubscription } from '../../utils/invoiceGenerator';
 import { logActivity } from '../../utils/activityLogger';
 import { useAuth } from '../../contexts/AuthContext';
+import { debitWallet } from '../../utils/wallet';
+import { creditSubscriptionWallet } from '../../utils/subscriptionWallet';
 
 interface CreateSubscriptionModalProps {
   onClose: () => void;
@@ -18,6 +20,7 @@ interface DailyMeal {
   count: number;
   quantityPerUnit: number;
   pricePerUnit: number;
+  overriddenPrice?: number;
 }
 
 interface CalendarDay {
@@ -192,10 +195,30 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
     });
   };
 
+  const updatePriceOverride = (dayIndex: number, mealIndex: number, price: number | undefined) => {
+    setCalendarDays(prev => {
+      return prev.map((day, dIdx) => {
+        if (dIdx === dayIndex) {
+          return {
+            ...day,
+            meals: day.meals.map((meal, mIdx) => {
+              if (mIdx === mealIndex) {
+                return { ...meal, overriddenPrice: price };
+              }
+              return meal;
+            })
+          };
+        }
+        return day;
+      });
+    });
+  };
+
   const calculateTotal = () => {
     return calendarDays.reduce((total, day) => {
       return total + day.meals.reduce((dayTotal, meal) => {
-        const effectivePrice = meal.discountedPrice ?? meal.pricePerUnit;
+        const basePrice = meal.overriddenPrice !== undefined ? meal.overriddenPrice : meal.pricePerUnit;
+        const effectivePrice = meal.discountedPrice ?? basePrice;
         return dayTotal + (meal.count * effectivePrice);
       }, 0);
     }, 0);
@@ -420,6 +443,10 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
       const firstMeal = calendarDays.find(d => d.meals.length > 0)?.meals[0];
       if (!firstMeal) throw new Error('No meals configured');
 
+      const hasPriceOverride = calendarDays.some(day =>
+        day.meals.some(meal => meal.overriddenPrice !== undefined)
+      );
+
       const { data: subscription, error: subError } = await supabase
         .from('subscriptions')
         .insert({
@@ -436,6 +463,7 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
           applied_coupon_id: selectedCouponId || null,
           coupon_discount_amount: couponDiscount,
           final_price: finalPrice,
+          price_override: hasPriceOverride ? finalPrice : null,
           delivery_address: deliveryAddress,
           status: 'active',
           start_date: startDate,
@@ -462,6 +490,7 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
         for (const meal of day.meals) {
           if (meal.count > 0) {
             for (let i = 0; i < meal.count; i++) {
+              const effectivePrice = meal.overriddenPrice !== undefined ? meal.overriddenPrice : meal.pricePerUnit;
               const { error: dailyItemError } = await supabase
                 .from('subscription_daily_items')
                 .insert({
@@ -470,7 +499,7 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
                   meal_id: meal.mealId,
                   delivery_date: day.dateString,
                   quantity: meal.quantityPerUnit,
-                  price: meal.pricePerUnit,
+                  price: effectivePrice,
                 });
 
               if (dailyItemError) throw dailyItemError;
@@ -496,6 +525,24 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
       }
 
       await generateInvoiceForSubscription(subscription.id, selectedCustomerId);
+
+      const walletDeduction = await debitWallet(
+        selectedCustomerId,
+        finalPrice,
+        `Subscription ${subscription.id}`,
+        'subscription'
+      );
+
+      if (walletDeduction.success) {
+        await creditSubscriptionWallet(
+          selectedCustomerId,
+          finalPrice,
+          subscription.id,
+          `Credit from main wallet for subscription ${subscription.id}`
+        );
+      } else {
+        console.error('Failed to deduct from main wallet:', walletDeduction.error);
+      }
 
       if (profile) {
         await logActivity(
@@ -612,9 +659,9 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            min={tomorrowString}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                           />
+                          <p className="text-xs text-gray-500 mt-1">Admin can select past dates</p>
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
@@ -622,7 +669,7 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            min={startDate || tomorrowString}
+                            min={startDate}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                           />
                         </div>
@@ -863,22 +910,47 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
                               )}
                               <div className="flex-1">
                                 <p className="font-medium text-gray-900">{meal.mealName}</p>
-                                <p className="text-sm text-gray-500">
-                                  {meal.quantityPerUnit}g × ₹{meal.pricePerUnit.toFixed(2)}
-                                  {hasDiscount && (
-                                    <>
-                                      {' '}→{' '}
-                                      <span className="text-green-600 font-medium">
-                                        ₹{(meal.discountedPrice ?? meal.pricePerUnit).toFixed(2)}
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <span>{meal.quantityPerUnit}g × </span>
+                                  <div className="flex items-center gap-1">
+                                    <span className={meal.overriddenPrice !== undefined ? 'line-through text-gray-400' : ''}>
+                                      ₹{meal.pricePerUnit.toFixed(2)}
+                                    </span>
+                                    {meal.overriddenPrice !== undefined && (
+                                      <span className="text-orange-600 font-medium">
+                                        → ₹{meal.overriddenPrice.toFixed(2)}
                                       </span>
-                                    </>
-                                  )}
-                                </p>
+                                    )}
+                                    {hasDiscount && (
+                                      <>
+                                        {' '}→{' '}
+                                        <span className="text-green-600 font-medium">
+                                          ₹{(meal.discountedPrice ?? (meal.overriddenPrice !== undefined ? meal.overriddenPrice : meal.pricePerUnit)).toFixed(2)}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
                                 {discountMode === 'bulk' && hasDiscount && (
                                   <p className="text-xs text-blue-600 mt-1">
                                     Item Discount: {meal.itemDiscountType === 'percentage' ? `${meal.itemDiscountValue}%` : `₹${meal.itemDiscountValue}`} (from bulk)
                                   </p>
                                 )}
+                                <div className="flex items-center gap-2 mt-1">
+                                  <label className="text-xs text-gray-600 whitespace-nowrap">Override Price:</label>
+                                  <input
+                                    type="number"
+                                    value={meal.overriddenPrice !== undefined ? meal.overriddenPrice : ''}
+                                    onChange={(e) => {
+                                      const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                                      updatePriceOverride(dayIndex, mealIndex, value);
+                                    }}
+                                    placeholder={`Default: ₹${meal.pricePerUnit.toFixed(2)}`}
+                                    min="0"
+                                    step="0.01"
+                                    className="text-xs w-28 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
+                                  />
+                                </div>
                               </div>
                               <div className="flex items-center space-x-3">
                                 <button

@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { CheckCircle, XCircle, Clock, Eye, User, Calendar, DollarSign } from 'lucide-react';
 import { generateInvoiceForSubscription } from '../../utils/invoiceGenerator';
 import { triggerEmail } from '../../utils/emailTrigger';
+import { creditSubscriptionWallet } from '../../utils/subscriptionWallet';
 
 interface ManualPaymentTransaction {
   id: string;
@@ -110,6 +111,19 @@ export default function ManualPaymentVerification() {
             approved_by: adminProfile?.name || 'Admin',
             approved_date: new Date().toLocaleString(),
           }).catch(err => console.error('Error sending approval email:', err));
+
+          if (data.subscription_id && data.subscription_amount_deducted) {
+            const walletCreditResult = await creditSubscriptionWallet(
+              selectedTransaction.user_id,
+              data.subscription_amount_deducted,
+              data.subscription_id,
+              `Subscription ${data.subscription_id} payment from manual payment approval`
+            );
+
+            if (!walletCreditResult.success) {
+              console.error('Failed to credit subscription wallet:', walletCreditResult.error);
+            }
+          }
         }
 
         let successMessage = 'Payment approved successfully!\n\n';

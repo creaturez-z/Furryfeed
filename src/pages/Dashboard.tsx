@@ -12,8 +12,9 @@ import { AnnouncementBar } from '../components/AnnouncementBar';
 import { SubscriptionCalendarView } from '../components/SubscriptionCalendarView';
 import { SubscriptionDetailsView } from '../components/SubscriptionDetailsView';
 import PaymentModal from '../components/PaymentModal';
+import { CustomerSubscriptionWallet } from '../components/CustomerSubscriptionWallet';
 
-type Tab = 'subscriptions' | 'pets' | 'profile';
+type Tab = 'subscriptions' | 'pets' | 'profile' | 'subscription-wallet';
 
 type EnrichedSubscription = Subscription & {
   meal?: Meal;
@@ -217,6 +218,17 @@ export function Dashboard() {
             >
               <User className="w-5 h-5" />
               <span>Profile</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('subscription-wallet')}
+              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'subscription-wallet'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <WalletIcon className="w-5 h-5" />
+              <span>Subscription Wallet</span>
             </button>
           </div>
         </div>
@@ -531,6 +543,10 @@ export function Dashboard() {
 
             {activeTab === 'profile' && profile && (
               <ProfileForm profile={profile} />
+            )}
+
+            {activeTab === 'subscription-wallet' && (
+              <CustomerSubscriptionWallet />
             )}
           </>
         )}

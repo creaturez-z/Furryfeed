@@ -87,12 +87,24 @@ export default function ManualPaymentVerification() {
       if (data?.success) {
         if (data.subscription_id) {
           try {
-            await generateInvoiceForSubscription(data.subscription_id, selectedTransaction.user_id);
+            await generateInvoiceForSubscription(data.subscription_id, selectedTransaction?.user_id);
           } catch (invoiceError) {
             console.error('Invoice generation error:', invoiceError);
           }
         }
-        alert('Payment approved successfully! ' + (data.subscription_id ? 'Subscription activated and invoice generated.' : 'Wallet balance updated.'));
+
+        let successMessage = 'Payment approved successfully!\n\n';
+        successMessage += `Amount Credited: ₹${data.amount_credited?.toFixed(2) || '0.00'}\n`;
+
+        if (data.subscription_id && data.subscription_amount_deducted) {
+          successMessage += `Subscription Charge: ₹${data.subscription_amount_deducted.toFixed(2)}\n`;
+          successMessage += `Final Wallet Balance: ₹${data.final_wallet_balance.toFixed(2)}\n\n`;
+          successMessage += 'Subscription activated and invoice generated.';
+        } else {
+          successMessage += `Final Wallet Balance: ₹${data.final_wallet_balance?.toFixed(2) || '0.00'}`;
+        }
+
+        alert(successMessage);
         setSelectedTransaction(null);
         setActionNotes('');
         loadTransactions();

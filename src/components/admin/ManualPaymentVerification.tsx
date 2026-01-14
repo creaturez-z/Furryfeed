@@ -47,7 +47,7 @@ export default function ManualPaymentVerification() {
         .select(
           `
           *,
-          profiles!manual_payment_transactions_user_id_fkey(name, email),
+          profiles:user_id(name, email),
           subscriptions(id, status)
         `
         )

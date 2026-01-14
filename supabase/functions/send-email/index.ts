@@ -1,5 +1,5 @@
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,12 +13,14 @@ interface EmailPayload {
 }
 
 interface EmailSettings {
+  email_provider: string;
   smtp_host: string;
   smtp_port: number;
   smtp_username: string;
   smtp_password: string;
   sender_email: string;
   sender_name: string;
+  resend_api_key: string | null;
   is_enabled: boolean;
 }
 
@@ -43,37 +45,36 @@ function replaceVariables(template: string, variables: Record<string, string>): 
   return result;
 }
 
-async function sendSMTPEmail(
-  settings: EmailSettings,
+async function sendEmailViaResend(
+  apiKey: string,
+  from: string,
   to: string,
   subject: string,
   body: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const client = new SMTPClient({
-      connection: {
-        hostname: settings.smtp_host,
-        port: settings.smtp_port,
-        tls: true,
-        auth: {
-          username: settings.smtp_username,
-          password: settings.smtp_password,
-        },
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        from: from,
+        to: [to],
+        subject: subject,
+        html: body,
+      }),
     });
 
-    await client.send({
-      from: `${settings.sender_name} <${settings.sender_email}>`,
-      to: to,
-      subject: subject,
-      content: body,
-    });
-
-    await client.close();
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to send email via Resend');
+    }
 
     return { success: true };
   } catch (error) {
-    console.error('SMTP Error:', error);
+    console.error('Resend Error:', error);
     return {
       success: false,
       error: error.message || 'Failed to send email',
@@ -132,6 +133,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    if (settings.email_provider === 'resend' && !settings.resend_api_key) {
+      throw new Error('Resend API key not configured');
+    }
+
+    if (settings.email_provider === 'smtp') {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'SMTP is not supported in Edge Functions. Please use Resend provider instead.',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
     const { data: templateData, error: templateError } = await supabase
       .from('email_templates')
       .select('*')
@@ -182,9 +200,17 @@ Deno.serve(async (req: Request) => {
     const subject = replaceVariables(template.subject, variables);
     const body = replaceVariables(template.body, variables);
 
+    const fromAddress = `${settings.sender_name} <${settings.sender_email}>`;
+
     const results = [];
     for (const recipient of recipients) {
-      const result = await sendSMTPEmail(settings, recipient.email, subject, body);
+      const result = await sendEmailViaResend(
+        settings.resend_api_key!,
+        fromAddress,
+        recipient.email,
+        subject,
+        body
+      );
 
       await supabase.from('email_logs').insert({
         event_type: eventType,

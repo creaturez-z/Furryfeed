@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { CheckCircle, XCircle, Clock, Eye, User, Calendar, DollarSign } from 'lucide-react';
+import { generateInvoiceForSubscription } from '../../utils/invoiceGenerator';
 
 interface ManualPaymentTransaction {
   id: string;
@@ -84,7 +85,14 @@ export default function ManualPaymentVerification() {
       if (error) throw error;
 
       if (data?.success) {
-        alert('Payment approved successfully! Wallet balance updated.');
+        if (data.subscription_id) {
+          try {
+            await generateInvoiceForSubscription(data.subscription_id, selectedTransaction.user_id);
+          } catch (invoiceError) {
+            console.error('Invoice generation error:', invoiceError);
+          }
+        }
+        alert('Payment approved successfully! ' + (data.subscription_id ? 'Subscription activated and invoice generated.' : 'Wallet balance updated.'));
         setSelectedTransaction(null);
         setActionNotes('');
         loadTransactions();

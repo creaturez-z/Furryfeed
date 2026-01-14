@@ -11,6 +11,7 @@ interface PaymentSettings {
   upi_id: string | null;
   phone_number: string | null;
   qr_code_url: string | null;
+  contact_phone: string | null;
 }
 
 export default function PaymentSettingsManagement() {
@@ -27,6 +28,7 @@ export default function PaymentSettingsManagement() {
     upi_id: '',
     phone_number: '',
     qr_code_url: '',
+    contact_phone: '',
   });
 
   useEffect(() => {
@@ -53,6 +55,7 @@ export default function PaymentSettingsManagement() {
           upi_id: data.upi_id || '',
           phone_number: data.phone_number || '',
           qr_code_url: data.qr_code_url || '',
+          contact_phone: data.contact_phone || '',
         });
       }
     } catch (error) {
@@ -253,7 +256,7 @@ export default function PaymentSettingsManagement() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number
+                  Phone Number (for UPI)
                 </label>
                 <input
                   type="text"
@@ -262,6 +265,25 @@ export default function PaymentSettingsManagement() {
                   placeholder="+91 9876543210"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Phone number displayed for UPI payments
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Contact Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={formData.contact_phone}
+                  onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                  placeholder="+91 9876543210"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Customer support phone number displayed in payment popup
+                </p>
               </div>
 
               <div>

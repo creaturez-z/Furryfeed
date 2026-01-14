@@ -16,6 +16,7 @@ interface PaymentSettings {
   upi_id: string | null;
   phone_number: string | null;
   qr_code_url: string | null;
+  contact_phone: string | null;
 }
 
 export default function PaymentModal({
@@ -236,6 +237,15 @@ export default function PaymentModal({
               >
                 ← Change payment method
               </button>
+
+              {paymentSettings?.contact_phone && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-blue-900 mb-1">Need Help?</p>
+                  <p className="text-sm text-blue-700">
+                    Contact us: <a href={`tel:${paymentSettings.contact_phone}`} className="font-semibold hover:underline">{paymentSettings.contact_phone}</a>
+                  </p>
+                </div>
+              )}
 
               <div className="bg-gray-50 rounded-lg p-6 space-y-4">
                 <h4 className="font-semibold text-gray-900">Payment Details</h4>

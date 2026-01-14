@@ -270,6 +270,7 @@ export function SubscriptionsManagement() {
 
   const handleDurationClick = (subscription: SubscriptionWithDetails) => {
     setSelectedSubscription(subscription);
+    setShowDetailsModal(false);
     setShowCalendarView(true);
   };
 

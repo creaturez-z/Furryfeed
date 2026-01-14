@@ -479,7 +479,7 @@ export function Subscribe() {
           tax_percentage: taxCalculation?.taxPercentage,
           tax_amount: taxCalculation?.taxAmount || 0,
           delivery_address: deliveryAddress,
-          status: hasInsufficientBalance ? 'inactive' : 'active',
+          status: hasInsufficientBalance ? 'paused' : 'active',
           payment_status: hasInsufficientBalance ? 'pending_payment' : 'paid',
           payment_method: hasInsufficientBalance ? null : 'wallet',
           start_date: startDate,

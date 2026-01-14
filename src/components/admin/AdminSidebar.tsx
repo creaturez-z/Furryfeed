@@ -32,6 +32,7 @@ import {
   Activity,
   Tag,
   Gift,
+  Mail,
 } from 'lucide-react';
 
 type AdminTab =
@@ -68,7 +69,8 @@ type AdminTab =
   | 'coupons'
   | 'referral-coupons'
   | 'payment-settings'
-  | 'payment-verification';
+  | 'payment-verification'
+  | 'email-settings';
 
 interface SidebarGroup {
   id: string;
@@ -157,6 +159,7 @@ const sidebarGroups: SidebarGroup[] = [
     label: 'Marketing & Communication',
     items: [
       { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+      { id: 'email-settings', label: 'Email Settings', icon: Mail },
       { id: 'coupons', label: 'Coupons', icon: Tag },
       { id: 'referral-coupons', label: 'Referral Coupons', icon: Gift },
     ],

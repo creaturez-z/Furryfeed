@@ -37,8 +37,9 @@ import { ReferralCouponsManagement } from '../components/admin/ReferralCouponsMa
 import InventoryManagement from '../components/admin/InventoryManagement';
 import PaymentSettingsManagement from '../components/admin/PaymentSettingsManagement';
 import ManualPaymentVerification from '../components/admin/ManualPaymentVerification';
+import { EmailSettingsManagement } from '../components/admin/EmailSettingsManagement';
 
-type AdminTab = 'dashboard' | 'calendar' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'section-order' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer' | 'invoices' | 'invoice-settings' | 'activity-logs' | 'admin-management' | 'coupons' | 'referral-coupons' | 'inventory' | 'payment-settings' | 'payment-verification';
+type AdminTab = 'dashboard' | 'calendar' | 'meals' | 'meal-layout' | 'weight-slabs' | 'tax-config' | 'banners' | 'hero-banners' | 'featured-banners' | 'announcement-bar' | 'section-order' | 'kitchens' | 'staff' | 'delivery' | 'wallet' | 'customers' | 'subscriptions' | 'reports' | 'whatsapp' | 'brand-settings' | 'menu-builder' | 'label-settings' | 'custom-css' | 'pages' | 'footer' | 'invoices' | 'invoice-settings' | 'activity-logs' | 'admin-management' | 'coupons' | 'referral-coupons' | 'inventory' | 'payment-settings' | 'payment-verification' | 'email-settings';
 
 export function AdminPanel() {
   const navigate = useNavigate();
@@ -111,6 +112,7 @@ export function AdminPanel() {
           {activeTab === 'subscriptions' && <SubscriptionsManagement />}
           {activeTab === 'reports' && <ReportsManagement />}
           {activeTab === 'whatsapp' && <WhatsAppManagement />}
+          {activeTab === 'email-settings' && <EmailSettingsManagement />}
           {activeTab === 'brand-settings' && <BrandSettingsManagement />}
           {activeTab === 'menu-builder' && <MenuBuilderManagement />}
           {activeTab === 'label-settings' && <LabelSettingsManagement />}

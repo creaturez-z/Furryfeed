@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { triggerEmail } from './emailTrigger';
 
 export async function ensureWalletExists(customerId: string) {
   const { data: existingWallet } = await supabase
@@ -57,6 +58,25 @@ export async function creditWallet(
     });
 
   if (transactionError) throw transactionError;
+
+  if (referenceType === 'admin_adjustment' || referenceType === 'recharge') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name, email, phone')
+      .eq('id', customerId)
+      .maybeSingle();
+
+    if (profile) {
+      triggerEmail('wallet_recharge', {
+        customer_name: profile.name,
+        customer_email: profile.email || '',
+        amount: amount.toFixed(2),
+        new_balance: newBalance.toFixed(2),
+        reason: reason,
+        transaction_date: new Date().toLocaleString(),
+      }).catch(err => console.error('Error sending wallet recharge email:', err));
+    }
+  }
 
   return newBalance;
 }

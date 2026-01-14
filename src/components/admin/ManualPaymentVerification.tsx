@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { CheckCircle, XCircle, Clock, Eye, User, Calendar, DollarSign } from 'lucide-react';
 import { generateInvoiceForSubscription } from '../../utils/invoiceGenerator';
+import { triggerEmail } from '../../utils/emailTrigger';
 
 interface ManualPaymentTransaction {
   id: string;
@@ -93,6 +94,24 @@ export default function ManualPaymentVerification() {
           }
         }
 
+        if (selectedTransaction) {
+          const { data: adminProfile } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', userData.user.id)
+            .maybeSingle();
+
+          triggerEmail('manual_payment_approved', {
+            customer_name: selectedTransaction.profiles?.name || 'Customer',
+            customer_email: selectedTransaction.profiles?.email || '',
+            amount: selectedTransaction.amount.toFixed(2),
+            payment_method: 'Manual Payment',
+            transaction_id: selectedTransaction.utr_number || transactionId,
+            approved_by: adminProfile?.name || 'Admin',
+            approved_date: new Date().toLocaleString(),
+          }).catch(err => console.error('Error sending approval email:', err));
+        }
+
         let successMessage = 'Payment approved successfully!\n\n';
         successMessage += `Amount Credited: ₹${data.amount_credited?.toFixed(2) || '0.00'}\n`;
 
@@ -141,6 +160,25 @@ export default function ManualPaymentVerification() {
       if (error) throw error;
 
       if (data?.success) {
+        if (selectedTransaction) {
+          const { data: adminProfile } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', userData.user.id)
+            .maybeSingle();
+
+          triggerEmail('manual_payment_rejected', {
+            customer_name: selectedTransaction.profiles?.name || 'Customer',
+            customer_email: selectedTransaction.profiles?.email || '',
+            amount: selectedTransaction.amount.toFixed(2),
+            payment_method: 'Manual Payment',
+            transaction_id: selectedTransaction.utr_number || transactionId,
+            rejection_reason: actionNotes,
+            rejected_by: adminProfile?.name || 'Admin',
+            rejected_date: new Date().toLocaleString(),
+          }).catch(err => console.error('Error sending rejection email:', err));
+        }
+
         alert('Payment rejected.');
         setSelectedTransaction(null);
         setActionNotes('');

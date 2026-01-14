@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types/database';
+import { triggerEmail } from '../utils/emailTrigger';
 
 interface AuthContextType {
   user: User | null;
@@ -80,6 +81,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
 
         if (profileError) throw profileError;
+
+        triggerEmail('customer_signup', {
+          customer_name: profileData.name,
+          customer_email: email,
+          customer_phone: profileData.phone,
+          signup_date: new Date().toLocaleString(),
+        }).catch(err => console.error('Error sending signup email:', err));
       }
     } catch (error) {
       console.error('Error signing up:', error);

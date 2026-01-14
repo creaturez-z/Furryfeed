@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -49,127 +50,34 @@ async function sendSMTPEmail(
   body: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Create the email message in RFC 5322 format
-    const message = [
-      `From: ${settings.sender_name} <${settings.sender_email}>`,
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      'MIME-Version: 1.0',
-      'Content-Type: text/plain; charset=utf-8',
-      '',
-      body,
-    ].join('\r\n');
-
-    // Encode message in base64
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    const base64Message = btoa(String.fromCharCode(...data));
-
-    // Connect to SMTP server
-    const conn = await Deno.connect({
-      hostname: settings.smtp_host,
-      port: settings.smtp_port,
-    });
-
-    const reader = conn.readable.getReader();
-    const writer = conn.writable.getWriter();
-
-    // Helper to read response
-    const readResponse = async (): Promise<string> => {
-      const { value } = await reader.read();
-      return new TextDecoder().decode(value);
-    };
-
-    // Helper to send command
-    const sendCommand = async (command: string) => {
-      await writer.write(new TextEncoder().encode(command + '\r\n'));
-    };
-
-    try {
-      // Read greeting
-      await readResponse();
-
-      // EHLO
-      await sendCommand(`EHLO ${settings.smtp_host}`);
-      await readResponse();
-
-      // STARTTLS
-      await sendCommand('STARTTLS');
-      await readResponse();
-
-      // Close current connection and upgrade to TLS
-      reader.releaseLock();
-      writer.releaseLock();
-      conn.close();
-
-      // Reconnect with TLS
-      const tlsConn = await Deno.connectTls({
+    const client = new SMTPClient({
+      connection: {
         hostname: settings.smtp_host,
         port: settings.smtp_port,
-      });
+        tls: true,
+        auth: {
+          username: settings.smtp_username,
+          password: settings.smtp_password,
+        },
+      },
+    });
 
-      const tlsReader = tlsConn.readable.getReader();
-      const tlsWriter = tlsConn.writable.getWriter();
+    await client.send({
+      from: `${settings.sender_name} <${settings.sender_email}>`,
+      to: to,
+      subject: subject,
+      content: body,
+    });
 
-      const tlsReadResponse = async (): Promise<string> => {
-        const { value } = await tlsReader.read();
-        return new TextDecoder().decode(value);
-      };
+    await client.close();
 
-      const tlsSendCommand = async (command: string) => {
-        await tlsWriter.write(new TextEncoder().encode(command + '\r\n'));
-      };
-
-      // EHLO again after TLS
-      await tlsSendCommand(`EHLO ${settings.smtp_host}`);
-      await tlsReadResponse();
-
-      // AUTH LOGIN
-      await tlsSendCommand('AUTH LOGIN');
-      await tlsReadResponse();
-
-      // Send username (base64 encoded)
-      await tlsSendCommand(btoa(settings.smtp_username));
-      await tlsReadResponse();
-
-      // Send password (base64 encoded)
-      await tlsSendCommand(btoa(settings.smtp_password));
-      await tlsReadResponse();
-
-      // MAIL FROM
-      await tlsSendCommand(`MAIL FROM:<${settings.sender_email}>`);
-      await tlsReadResponse();
-
-      // RCPT TO
-      await tlsSendCommand(`RCPT TO:<${to}>`);
-      await tlsReadResponse();
-
-      // DATA
-      await tlsSendCommand('DATA');
-      await tlsReadResponse();
-
-      // Send message
-      await tlsSendCommand(message + '\r\n.');
-      await tlsReadResponse();
-
-      // QUIT
-      await tlsSendCommand('QUIT');
-      await tlsReadResponse();
-
-      tlsReader.releaseLock();
-      tlsWriter.releaseLock();
-      tlsConn.close();
-
-      return { success: true };
-    } catch (error) {
-      reader.releaseLock();
-      writer.releaseLock();
-      conn.close();
-      throw error;
-    }
+    return { success: true };
   } catch (error) {
     console.error('SMTP Error:', error);
-    return { success: false, error: error.message || 'Failed to send email' };
+    return {
+      success: false,
+      error: error.message || 'Failed to send email',
+    };
   }
 }
 
@@ -182,18 +90,15 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Get authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
     }
 
-    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse request body
     const payload: EmailPayload = await req.json();
     const { eventType, variables } = payload;
 
@@ -201,7 +106,6 @@ Deno.serve(async (req: Request) => {
       throw new Error('Missing required fields: eventType and variables');
     }
 
-    // Get email settings
     const { data: settingsData, error: settingsError } = await supabase
       .from('email_settings')
       .select('*')
@@ -218,7 +122,6 @@ Deno.serve(async (req: Request) => {
 
     const settings: EmailSettings = settingsData;
 
-    // Check if email system is enabled
     if (!settings.is_enabled) {
       return new Response(
         JSON.stringify({ success: false, message: 'Email system is disabled' }),
@@ -229,7 +132,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Get email template
     const { data: templateData, error: templateError } = await supabase
       .from('email_templates')
       .select('*')
@@ -246,7 +148,6 @@ Deno.serve(async (req: Request) => {
 
     const template: EmailTemplate = templateData;
 
-    // Check if template is enabled
     if (!template.is_enabled) {
       return new Response(
         JSON.stringify({ success: false, message: `Email disabled for event: ${eventType}` }),
@@ -257,7 +158,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Get active recipients
     const { data: recipientsData, error: recipientsError } = await supabase
       .from('email_recipients')
       .select('*')
@@ -279,16 +179,13 @@ Deno.serve(async (req: Request) => {
 
     const recipients: EmailRecipient[] = recipientsData;
 
-    // Replace variables in subject and body
     const subject = replaceVariables(template.subject, variables);
     const body = replaceVariables(template.body, variables);
 
-    // Send email to all active recipients
     const results = [];
     for (const recipient of recipients) {
       const result = await sendSMTPEmail(settings, recipient.email, subject, body);
-      
-      // Log the email attempt
+
       await supabase.from('email_logs').insert({
         event_type: eventType,
         recipient_email: recipient.email,

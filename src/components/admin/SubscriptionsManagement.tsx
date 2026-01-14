@@ -118,6 +118,19 @@ export function SubscriptionsManagement() {
     }
   };
 
+  const getPaymentStatusColor = (status: string | null | undefined) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-green-100 text-green-700';
+      case 'pending_payment':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'failed':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
   const handleViewDetails = (subscription: SubscriptionWithDetails) => {
     setSelectedSubscription(subscription);
     setShowDetailsModal(true);
@@ -202,13 +215,14 @@ export function SubscriptionsManagement() {
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Type</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Price</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Status</th>
+                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Payment</th>
                 <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredSubscriptions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-gray-500">
+                  <td colSpan={8} className="text-center py-8 text-gray-500">
                     No subscriptions found
                   </td>
                 </tr>
@@ -236,6 +250,17 @@ export function SubscriptionsManagement() {
                         )}`}
                       >
                         {subscription.status}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-medium capitalize ${getPaymentStatusColor(
+                          (subscription as any).payment_status
+                        )}`}
+                      >
+                        {(subscription as any).payment_status ?
+                          (subscription as any).payment_status.replace('_', ' ') :
+                          'paid'}
                       </span>
                     </td>
                     <td className="py-4 px-6">

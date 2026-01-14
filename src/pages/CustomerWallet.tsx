@@ -7,6 +7,7 @@ import { ensureWalletExists, creditWallet } from '../utils/wallet';
 import { ArrowLeft, Wallet as WalletIcon, Plus, ArrowUpCircle, ArrowDownCircle, Package } from 'lucide-react';
 import { WhatsAppBubble } from '../components/WhatsAppBubble';
 import { AnnouncementBar } from '../components/AnnouncementBar';
+import PaymentModal from '../components/PaymentModal';
 
 export function CustomerWallet() {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ export function CustomerWallet() {
   const [loading, setLoading] = useState(true);
   const [showRechargeForm, setShowRechargeForm] = useState(false);
   const [rechargeAmount, setRechargeAmount] = useState(100);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingRechargeAmount, setPendingRechargeAmount] = useState(0);
 
   useEffect(() => {
     loadWalletData();
@@ -59,22 +62,9 @@ export function CustomerWallet() {
     e.preventDefault();
     if (!user || rechargeAmount <= 0) return;
 
-    try {
-      await creditWallet(
-        user.id,
-        rechargeAmount,
-        'Wallet recharge',
-        'recharge'
-      );
-
-      setRechargeAmount(100);
-      setShowRechargeForm(false);
-      await loadWalletData();
-      alert('Wallet recharged successfully!');
-    } catch (error) {
-      console.error('Error recharging wallet:', error);
-      alert('Failed to recharge wallet');
-    }
+    setPendingRechargeAmount(rechargeAmount);
+    setShowRechargeForm(false);
+    setShowPaymentModal(true);
   };
 
   if (loading) {
@@ -226,6 +216,21 @@ export function CustomerWallet() {
           )}
         </div>
       </div>
+
+      {showPaymentModal && (
+        <PaymentModal
+          subscriptionId={null}
+          amount={pendingRechargeAmount}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setRechargeAmount(100);
+          }}
+          onSuccess={() => {
+            loadWalletData();
+          }}
+        />
+      )}
+
       <WhatsAppBubble pageType="customer" />
     </div>
   );

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { X, Upload, CheckCircle, CreditCard, Smartphone, QrCode } from 'lucide-react';
 
 interface PaymentModalProps {
-  subscriptionId: string;
+  subscriptionId: string | null;
   amount: number;
   onClose: () => void;
   onSuccess: () => void;
@@ -103,7 +103,7 @@ export default function PaymentModal({
         .from('manual_payment_transactions')
         .insert({
           user_id: userData.user.id,
-          subscription_id: subscriptionId,
+          subscription_id: subscriptionId || null,
           amount: amount,
           utr_number: utrNumber || null,
           screenshot_url: screenshotUrl,
@@ -167,7 +167,9 @@ export default function PaymentModal({
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900">Complete Payment</h3>
+            <h3 className="text-xl font-bold text-gray-900">
+              {subscriptionId ? 'Complete Payment' : 'Recharge Wallet'}
+            </h3>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <X className="w-6 h-6" />
             </button>

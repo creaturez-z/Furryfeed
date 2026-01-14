@@ -68,12 +68,7 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
   const [bulkDiscountType, setBulkDiscountType] = useState<'percentage' | 'flat' | ''>('');
   const [bulkDiscountValue, setBulkDiscountValue] = useState('');
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowString = tomorrow.toISOString().split('T')[0];
-
   useEffect(() => {
-    setStartDate(tomorrowString);
     loadData();
   }, []);
 

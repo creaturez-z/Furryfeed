@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Subscription, ProfileWithEmail, Pet, Meal } from '../../types/database';
-import { Search, Play, Pause, XCircle, Eye, Calendar, Plus, FileText, User, PawPrint, Edit } from 'lucide-react';
+import { Search, Play, Pause, XCircle, Eye, Calendar, Plus, FileText, User, PawPrint, Edit, Wallet, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { CreateSubscriptionModal } from './CreateSubscriptionModal';
 import { SubscriptionCalendarView } from '../SubscriptionCalendarView';
 import { InvoiceModal } from '../InvoiceModal';
@@ -40,6 +40,8 @@ export function SubscriptionsManagement() {
   const [customerPets, setCustomerPets] = useState<Pet[]>([]);
   const [showPetModal, setShowPetModal] = useState(false);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
 
   useEffect(() => {
     loadSubscriptions();
@@ -216,8 +218,26 @@ export function SubscriptionsManagement() {
         .select('*')
         .eq('customer_id', customer.id);
       setCustomerPets(pets || []);
+
+      const { data: wallet } = await supabase
+        .from('wallets')
+        .select('balance')
+        .eq('customer_id', customer.id)
+        .maybeSingle();
+      setWalletBalance(wallet?.balance || 0);
+
+      const { data: transactions } = await supabase
+        .from('wallet_transactions')
+        .select(`
+          *,
+          admin:profiles!wallet_transactions_admin_id_fkey(name)
+        `)
+        .eq('customer_id', customer.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      setWalletTransactions(transactions || []);
     } catch (error) {
-      console.error('Error loading customer pets:', error);
+      console.error('Error loading customer data:', error);
     }
     setShowCustomerModal(true);
   };
@@ -694,6 +714,8 @@ export function SubscriptionsManagement() {
                     setShowCustomerModal(false);
                     setSelectedCustomer(null);
                     setCustomerPets([]);
+                    setWalletBalance(0);
+                    setWalletTransactions([]);
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -718,6 +740,73 @@ export function SubscriptionsManagement() {
                     }}
                     isAdmin={true}
                   />
+                </div>
+
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <Wallet className="w-5 h-5" />
+                      Wallet Information
+                    </h4>
+                    <div className="text-2xl font-bold text-orange-600">
+                      ₹{walletBalance.toFixed(2)}
+                    </div>
+                  </div>
+
+                  {walletTransactions.length > 0 ? (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      <h5 className="text-sm font-medium text-gray-700 mb-2">Recent Transactions</h5>
+                      {walletTransactions.map((transaction) => (
+                        <div
+                          key={transaction.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border ${
+                            transaction.type === 'credit'
+                              ? 'bg-green-50 border-green-200'
+                              : 'bg-red-50 border-red-200'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3 flex-1">
+                            {transaction.type === 'credit' ? (
+                              <ArrowUpCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            ) : (
+                              <ArrowDownCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 capitalize">
+                                {transaction.type}
+                              </p>
+                              <p className="text-xs text-gray-600 truncate">{transaction.reason}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-gray-500 capitalize">
+                                  {transaction.reference_type}
+                                </span>
+                                {transaction.admin && (
+                                  <span className="text-xs text-gray-400">
+                                    by {transaction.admin.name}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {new Date(transaction.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div
+                            className={`text-sm font-bold ${
+                              transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'
+                            }`}
+                          >
+                            {transaction.type === 'credit' ? '+' : '-'}₹
+                            {Math.abs(transaction.amount).toFixed(2)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      No transactions found
+                    </p>
+                  )}
                 </div>
 
                 {customerPets.length > 0 && (

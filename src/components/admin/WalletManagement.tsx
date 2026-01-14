@@ -228,7 +228,7 @@ export function WalletManagement() {
               <div className="font-medium text-gray-900">{customer.name}</div>
               <div className="text-xs text-gray-600">{customer.email}</div>
               <div className="text-sm font-semibold text-orange-600 mt-1">
-                ₹{customer.wallet_balance.toFixed(2)}
+                ₹{(customer.wallet_balance || 0).toFixed(2)}
               </div>
             </button>
           ))}
@@ -251,7 +251,7 @@ export function WalletManagement() {
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Wallet Balance</p>
                   <p className="text-3xl font-bold text-orange-500">
-                    ₹{selectedCustomer.wallet_balance.toFixed(2)}
+                    ₹{(selectedCustomer.wallet_balance || 0).toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -362,12 +362,12 @@ export function WalletManagement() {
                             }`}
                           >
                             {transaction.type === 'credit' ? '+' : '-'}₹
-                            {transaction.amount.toFixed(2)}
+                            {(parseFloat(transaction.amount) || 0).toFixed(2)}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-700">{transaction.reason}</p>
+                        <p className="text-sm text-gray-700 font-medium">{transaction.reason || 'No reason provided'}</p>
                         <p className="text-xs text-gray-500 mt-1">
-                          {transaction.reference_type.replace('_', ' ')}
+                          {transaction.reference_type?.replace(/_/g, ' ') || 'N/A'}
                         </p>
                       </div>
                       <div className="text-right">

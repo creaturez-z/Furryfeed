@@ -1352,18 +1352,17 @@ export function CustomersManagement() {
                                 <ArrowDownCircle className="w-5 h-5 text-red-600" />
                               )}
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{tx.description}</p>
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900">{tx.reason || 'No reason provided'}</p>
                               <p className="text-xs text-gray-500">
-                                {new Date(tx.created_at).toLocaleString()}
+                                {tx.reference_type?.replace(/_/g, ' ')} • {new Date(tx.created_at).toLocaleString()}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
                             <p className={`text-lg font-bold ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-                              {tx.type === 'credit' ? '+' : '-'}₹{parseFloat(tx.amount).toFixed(2)}
+                              {tx.type === 'credit' ? '+' : '-'}₹{(parseFloat(tx.amount) || 0).toFixed(2)}
                             </p>
-                            <p className="text-xs text-gray-500">Balance: ₹{parseFloat(tx.balance_after).toFixed(2)}</p>
                           </div>
                         </div>
                       ))

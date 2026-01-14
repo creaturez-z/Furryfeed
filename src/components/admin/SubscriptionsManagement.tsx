@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Subscription, ProfileWithEmail, Pet, Meal } from '../../types/database';
-import { Search, Play, Pause, XCircle, Eye, Calendar, Plus, FileText } from 'lucide-react';
+import { Search, Play, Pause, XCircle, Eye, Calendar, Plus, FileText, User, PawPrint, Edit } from 'lucide-react';
 import { CreateSubscriptionModal } from './CreateSubscriptionModal';
 import { SubscriptionCalendarView } from '../SubscriptionCalendarView';
 import { InvoiceModal } from '../InvoiceModal';
+import { ProfileForm } from '../ProfileForm';
+import { PetForm } from '../PetForm';
 
 type SubscriptionWithDetails = Subscription & {
   customer?: ProfileWithEmail;
   pet?: Pet;
   meal?: Meal;
+  duration?: {
+    totalDays: number;
+    mealsPerDay: number | 'multiple';
+    monthlyBreakdown?: { month: string; days: number }[];
+  };
 };
 
 export function SubscriptionsManagement() {
@@ -28,6 +35,11 @@ export function SubscriptionsManagement() {
   const [subscriptionToCancel, setSubscriptionToCancel] = useState<string | null>(null);
   const [showInvoice, setShowInvoice] = useState(false);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<ProfileWithEmail | null>(null);
+  const [customerPets, setCustomerPets] = useState<Pet[]>([]);
+  const [showPetModal, setShowPetModal] = useState(false);
+  const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
 
   useEffect(() => {
     loadSubscriptions();
@@ -61,6 +73,58 @@ export function SubscriptionsManagement() {
     setFilteredSubscriptions(filtered);
   }, [searchTerm, statusFilter, startDate, endDate, subscriptions]);
 
+  const calculateDuration = async (subscriptionId: string) => {
+    try {
+      const { data: dailyItems, error } = await supabase
+        .from('subscription_daily_items')
+        .select('delivery_date')
+        .eq('subscription_id', subscriptionId);
+
+      if (error || !dailyItems || dailyItems.length === 0) {
+        return { totalDays: 0, mealsPerDay: 0 };
+      }
+
+      const uniqueDates = [...new Set(dailyItems.map(item => item.delivery_date))];
+      const totalDays = uniqueDates.length;
+
+      const mealsPerDayMap = new Map<string, number>();
+      dailyItems.forEach(item => {
+        const count = mealsPerDayMap.get(item.delivery_date) || 0;
+        mealsPerDayMap.set(item.delivery_date, count + 1);
+      });
+
+      const mealCounts = Array.from(mealsPerDayMap.values());
+      const allSame = mealCounts.every(count => count === mealCounts[0]);
+      const mealsPerDay = allSame ? mealCounts[0] : 'multiple';
+
+      const monthlyBreakdown: { month: string; days: number }[] = [];
+      const monthMap = new Map<string, Set<string>>();
+
+      uniqueDates.forEach(date => {
+        const dateObj = new Date(date);
+        const monthKey = `${dateObj.toLocaleString('default', { month: 'short' })} ${dateObj.getFullYear()}`;
+
+        if (!monthMap.has(monthKey)) {
+          monthMap.set(monthKey, new Set());
+        }
+        monthMap.get(monthKey)!.add(date);
+      });
+
+      monthMap.forEach((dates, month) => {
+        monthlyBreakdown.push({ month, days: dates.size });
+      });
+
+      return {
+        totalDays,
+        mealsPerDay,
+        monthlyBreakdown: monthlyBreakdown.length > 1 ? monthlyBreakdown : undefined,
+      };
+    } catch (error) {
+      console.error('Error calculating duration:', error);
+      return { totalDays: 0, mealsPerDay: 0 };
+    }
+  };
+
   const loadSubscriptions = async () => {
     setLoading(true);
     try {
@@ -77,8 +141,16 @@ export function SubscriptionsManagement() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setSubscriptions(data || []);
-      setFilteredSubscriptions(data || []);
+
+      const subscriptionsWithDuration = await Promise.all(
+        (data || []).map(async (sub) => ({
+          ...sub,
+          duration: await calculateDuration(sub.id),
+        }))
+      );
+
+      setSubscriptions(subscriptionsWithDuration);
+      setFilteredSubscriptions(subscriptionsWithDuration);
     } catch (error) {
       console.error('Error loading subscriptions:', error);
     } finally {
@@ -134,6 +206,51 @@ export function SubscriptionsManagement() {
   const handleViewDetails = (subscription: SubscriptionWithDetails) => {
     setSelectedSubscription(subscription);
     setShowDetailsModal(true);
+  };
+
+  const handleCustomerClick = async (customer: ProfileWithEmail) => {
+    setSelectedCustomer(customer);
+    try {
+      const { data: pets } = await supabase
+        .from('pets')
+        .select('*')
+        .eq('customer_id', customer.id);
+      setCustomerPets(pets || []);
+    } catch (error) {
+      console.error('Error loading customer pets:', error);
+    }
+    setShowCustomerModal(true);
+  };
+
+  const handlePetClick = (pet: Pet) => {
+    setSelectedPet(pet);
+    setShowPetModal(true);
+  };
+
+  const handlePriceClick = async (subscriptionId: string) => {
+    try {
+      const { data } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('subscription_id', subscriptionId)
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setInvoiceId(data.id);
+        setShowInvoice(true);
+      } else {
+        alert('No invoice found for this subscription');
+      }
+    } catch (error) {
+      console.error('Error loading invoice:', error);
+      alert('Failed to load invoice');
+    }
+  };
+
+  const handleDurationClick = (subscription: SubscriptionWithDetails) => {
+    setSelectedSubscription(subscription);
+    setShowCalendarView(true);
   };
 
   if (loading) {
@@ -212,7 +329,7 @@ export function SubscriptionsManagement() {
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Customer</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Pet</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Meal</th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Type</th>
+                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Duration</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Price</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Status</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Payment</th>
@@ -230,18 +347,58 @@ export function SubscriptionsManagement() {
                 filteredSubscriptions.map((subscription) => (
                   <tr key={subscription.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-4 px-6">
-                      <div className="font-medium text-gray-900">{subscription.customer?.name}</div>
-                      <div className="text-xs text-gray-500">{subscription.customer?.email || subscription.customer?.phone}</div>
+                      <button
+                        onClick={() => subscription.customer && handleCustomerClick(subscription.customer)}
+                        className="text-left hover:bg-blue-50 rounded-lg p-2 -m-2 transition-colors w-full"
+                      >
+                        <div className="font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                          <User className="w-4 h-4" />
+                          {subscription.customer?.name}
+                        </div>
+                        <div className="text-xs text-gray-500">{subscription.customer?.email || subscription.customer?.phone}</div>
+                      </button>
                     </td>
-                    <td className="py-4 px-6 text-sm text-gray-700">{subscription.pet?.name}</td>
+                    <td className="py-4 px-6">
+                      <button
+                        onClick={() => subscription.pet && handlePetClick(subscription.pet)}
+                        className="text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg p-2 -m-2 transition-colors flex items-center gap-1"
+                      >
+                        <PawPrint className="w-4 h-4" />
+                        {subscription.pet?.name}
+                      </button>
+                    </td>
                     <td className="py-4 px-6 text-sm text-gray-700">{subscription.meal?.name}</td>
                     <td className="py-4 px-6">
-                      <span className="text-sm capitalize">{subscription.subscription_type}</span>
+                      <button
+                        onClick={() => handleDurationClick(subscription)}
+                        className="text-left hover:bg-blue-50 rounded-lg p-2 -m-2 transition-colors"
+                      >
+                        <div className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {subscription.duration?.totalDays || 0} days
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {subscription.duration?.mealsPerDay === 'multiple'
+                            ? 'multiple meals'
+                            : `${subscription.duration?.mealsPerDay || 0} meal${(subscription.duration?.mealsPerDay || 0) > 1 ? 's' : ''}/day`}
+                        </div>
+                        {subscription.duration?.monthlyBreakdown && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            {subscription.duration.monthlyBreakdown.map((mb, idx) => (
+                              <div key={idx}>{mb.month}: {mb.days} days</div>
+                            ))}
+                          </div>
+                        )}
+                      </button>
                     </td>
                     <td className="py-4 px-6">
-                      <span className="text-sm font-medium text-orange-600">
+                      <button
+                        onClick={() => handlePriceClick(subscription.id)}
+                        className="text-sm font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg p-2 -m-2 transition-colors flex items-center gap-1"
+                      >
+                        <FileText className="w-4 h-4" />
                         ₹{subscription.calculated_price.toFixed(2)}
-                      </span>
+                      </button>
                     </td>
                     <td className="py-4 px-6">
                       <span
@@ -524,6 +681,120 @@ export function SubscriptionsManagement() {
 
       {showInvoice && invoiceId && (
         <InvoiceModal invoiceId={invoiceId} onClose={() => setShowInvoice(false)} />
+      )}
+
+      {showCustomerModal && selectedCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">Customer Details</h3>
+                <button
+                  onClick={() => {
+                    setShowCustomerModal(false);
+                    setSelectedCustomer(null);
+                    setCustomerPets([]);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <User className="w-5 h-5" />
+                      Profile Information
+                    </h4>
+                  </div>
+                  <ProfileForm
+                    profile={selectedCustomer}
+                    onUpdate={async () => {
+                      await loadSubscriptions();
+                      setShowCustomerModal(false);
+                      setSelectedCustomer(null);
+                    }}
+                    isAdmin={true}
+                  />
+                </div>
+
+                {customerPets.length > 0 && (
+                  <div className="border rounded-lg p-4">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <PawPrint className="w-5 h-5" />
+                      Pets ({customerPets.length})
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {customerPets.map((pet) => (
+                        <div key={pet.id} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="font-medium text-gray-900">{pet.name}</p>
+                              <p className="text-sm text-gray-600">{pet.breed}</p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setSelectedPet(pet);
+                                setShowCustomerModal(false);
+                                setShowPetModal(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-700"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div className="text-sm text-gray-600 space-y-1">
+                            <p>Age: {pet.age} years</p>
+                            <p>Weight: {pet.weight ? (pet.weight / 1000).toFixed(2) : 0}kg</p>
+                            {pet.medical_conditions && (
+                              <p className="text-xs text-red-600">Medical: {pet.medical_conditions}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPetModal && selectedPet && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <PawPrint className="w-6 h-6" />
+                  Edit Pet Profile
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowPetModal(false);
+                    setSelectedPet(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+
+              <PetForm
+                pet={selectedPet}
+                onUpdate={async () => {
+                  await loadSubscriptions();
+                  setShowPetModal(false);
+                  setSelectedPet(null);
+                }}
+                isAdmin={true}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

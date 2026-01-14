@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { ProfileWithWallet } from '../../types/database';
-import { Search, Plus, Edit, Trash2, Ban, CheckCircle, X, Save } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Ban, CheckCircle, X, Save, User, Wallet, PawPrint, Package, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 
 export function CustomersManagement() {
   const [customers, setCustomers] = useState<ProfileWithWallet[]>([]);
@@ -16,6 +16,15 @@ export function CustomersManagement() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingCustomer, setDeletingCustomer] = useState<ProfileWithWallet | null>(null);
   const [deleteOption, setDeleteOption] = useState<'customer' | 'customer_invoices' | 'customer_subscriptions' | 'customer_all'>('customer');
+  const [showCustomerDetails, setShowCustomerDetails] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<ProfileWithWallet | null>(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletView, setWalletView] = useState<'transactions' | 'add' | 'deduct'>('transactions');
+  const [walletAmount, setWalletAmount] = useState('');
+  const [walletDescription, setWalletDescription] = useState('');
+  const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
+  const [customerPets, setCustomerPets] = useState<any[]>([]);
+  const [customerSubscriptions, setCustomerSubscriptions] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -40,20 +49,28 @@ export function CustomersManagement() {
   const loadCustomers = async () => {
     setLoading(true);
     try {
+      // First get all customer profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          wallets(balance)
-        `)
+        .select('*')
         .eq('role', 'customer')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
 
+      // Then get all wallets
+      const { data: walletsData } = await supabase
+        .from('wallets')
+        .select('customer_id, balance');
+
+      // Create a wallet lookup map
+      const walletMap = new Map(
+        (walletsData || []).map((w: any) => [w.customer_id, parseFloat(w.balance) || 0])
+      );
+
       const customersWithWallet: ProfileWithWallet[] = (profilesData || []).map((profile: any) => ({
         ...profile,
-        wallet_balance: profile.wallets?.[0]?.balance || 0,
+        wallet_balance: walletMap.get(profile.id) || 0,
       }));
 
       setCustomers(customersWithWallet);
@@ -239,6 +256,116 @@ export function CustomersManagement() {
     setShowForm(false);
   };
 
+  const handleCustomerClick = async (customer: ProfileWithWallet) => {
+    setSelectedCustomer(customer);
+
+    // Load customer's pets
+    const { data: petsData } = await supabase
+      .from('pets')
+      .select('*')
+      .eq('customer_id', customer.id);
+    setCustomerPets(petsData || []);
+
+    // Load customer's subscriptions
+    const { data: subsData } = await supabase
+      .from('subscriptions')
+      .select(`
+        *,
+        meal:meals(name),
+        pet:pets(name)
+      `)
+      .eq('customer_id', customer.id);
+    setCustomerSubscriptions(subsData || []);
+
+    setShowCustomerDetails(true);
+  };
+
+  const handleWalletClick = async (customer: ProfileWithWallet) => {
+    setSelectedCustomer(customer);
+    await loadWalletTransactions(customer.id);
+    setWalletView('transactions');
+    setShowWalletModal(true);
+  };
+
+  const loadWalletTransactions = async (customerId: string) => {
+    const { data } = await supabase
+      .from('wallet_transactions')
+      .select('*')
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false });
+    setWalletTransactions(data || []);
+  };
+
+  const handleWalletTransaction = async (type: 'credit' | 'debit') => {
+    if (!selectedCustomer || !walletAmount || parseFloat(walletAmount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    try {
+      const amount = parseFloat(walletAmount);
+
+      // Get or create wallet
+      let { data: wallet } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('customer_id', selectedCustomer.id)
+        .maybeSingle();
+
+      if (!wallet) {
+        const { data: newWallet, error: walletError } = await supabase
+          .from('wallets')
+          .insert({ customer_id: selectedCustomer.id, balance: 0 })
+          .select()
+          .single();
+
+        if (walletError) throw walletError;
+        wallet = newWallet;
+      }
+
+      const currentBalance = parseFloat(wallet.balance) || 0;
+      const newBalance = type === 'credit' ? currentBalance + amount : currentBalance - amount;
+
+      if (newBalance < 0) {
+        alert('Insufficient wallet balance');
+        return;
+      }
+
+      // Update wallet balance
+      const { error: updateError } = await supabase
+        .from('wallets')
+        .update({ balance: newBalance })
+        .eq('customer_id', selectedCustomer.id);
+
+      if (updateError) throw updateError;
+
+      // Create transaction record
+      const { error: txError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          customer_id: selectedCustomer.id,
+          type: type,
+          amount: amount,
+          description: walletDescription || `Admin ${type === 'credit' ? 'added' : 'deducted'} funds`,
+          balance_after: newBalance
+        });
+
+      if (txError) throw txError;
+
+      // Reload data
+      await loadCustomers();
+      await loadWalletTransactions(selectedCustomer.id);
+      setWalletAmount('');
+      setWalletDescription('');
+      setWalletView('transactions');
+
+      alert(`Successfully ${type === 'credit' ? 'added' : 'deducted'} ₹${amount.toFixed(2)}`);
+    } catch (error) {
+      console.error('Error processing wallet transaction:', error);
+      alert('Failed to process wallet transaction');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -380,17 +507,29 @@ export function CustomersManagement() {
                 filteredCustomers.map((customer) => (
                   <tr key={customer.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-4 px-6">
-                      <div className="font-medium text-gray-900">{customer.name}</div>
-                      {customer.alternative_phone && (
-                        <div className="text-xs text-gray-500">Alt: {customer.alternative_phone}</div>
-                      )}
+                      <button
+                        onClick={() => handleCustomerClick(customer)}
+                        className="text-left hover:bg-blue-50 rounded-lg p-2 -m-2 transition-colors w-full"
+                      >
+                        <div className="font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                          <User className="w-4 h-4" />
+                          {customer.name}
+                        </div>
+                        {customer.alternative_phone && (
+                          <div className="text-xs text-gray-500">Alt: {customer.alternative_phone}</div>
+                        )}
+                      </button>
                     </td>
                     <td className="py-4 px-6 text-sm text-gray-700">{customer.email || 'N/A'}</td>
                     <td className="py-4 px-6 text-sm text-gray-700">{customer.phone}</td>
                     <td className="py-4 px-6">
-                      <span className="text-sm font-medium text-orange-600">
+                      <button
+                        onClick={() => handleWalletClick(customer)}
+                        className="text-sm font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg p-2 -m-2 transition-colors flex items-center gap-1"
+                      >
+                        <Wallet className="w-4 h-4" />
                         ₹{(customer.wallet_balance || 0).toFixed(2)}
-                      </span>
+                      </button>
                     </td>
                     <td className="py-4 px-6">
                       <button
@@ -646,6 +785,332 @@ export function CustomersManagement() {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCustomerDetails && selectedCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full my-8">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white rounded-t-xl">
+              <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <User className="w-6 h-6" />
+                Customer Details
+              </h3>
+              <button
+                onClick={() => {
+                  setShowCustomerDetails(false);
+                  setSelectedCustomer(null);
+                }}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+              {/* Customer Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Personal Information
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Name</p>
+                    <p className="font-medium text-gray-900">{selectedCustomer.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Email</p>
+                    <p className="font-medium text-gray-900">{selectedCustomer.email || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Phone</p>
+                    <p className="font-medium text-gray-900">{selectedCustomer.phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Alternative Phone</p>
+                    <p className="font-medium text-gray-900">{selectedCustomer.alternative_phone || 'N/A'}</p>
+                  </div>
+                  {selectedCustomer.delivery_address && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-gray-600">Delivery Address</p>
+                      <p className="font-medium text-gray-900">{selectedCustomer.delivery_address}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Wallet Info */}
+              <div className="bg-orange-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Wallet className="w-5 h-5" />
+                  Wallet Balance
+                </h4>
+                <div className="flex items-center justify-between">
+                  <p className="text-3xl font-bold text-orange-600">
+                    ₹{(selectedCustomer.wallet_balance || 0).toFixed(2)}
+                  </p>
+                  <button
+                    onClick={() => {
+                      handleWalletClick(selectedCustomer);
+                      setShowCustomerDetails(false);
+                    }}
+                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                  >
+                    Manage Wallet
+                  </button>
+                </div>
+              </div>
+
+              {/* Pets */}
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <PawPrint className="w-5 h-5" />
+                  Pets ({customerPets.length})
+                </h4>
+                {customerPets.length === 0 ? (
+                  <p className="text-sm text-gray-600">No pets registered</p>
+                ) : (
+                  <div className="space-y-2">
+                    {customerPets.map((pet) => (
+                      <div key={pet.id} className="bg-white rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">{pet.name}</p>
+                            <p className="text-sm text-gray-600">{pet.breed} • {pet.age} years • {pet.weight}g</p>
+                          </div>
+                        </div>
+                        {pet.medical_condition && (
+                          <p className="text-xs text-gray-500 mt-1">Medical: {pet.medical_condition}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Subscriptions */}
+              <div className="bg-green-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Package className="w-5 h-5" />
+                  Subscriptions ({customerSubscriptions.length})
+                </h4>
+                {customerSubscriptions.length === 0 ? (
+                  <p className="text-sm text-gray-600">No active subscriptions</p>
+                ) : (
+                  <div className="space-y-2">
+                    {customerSubscriptions.map((sub: any) => (
+                      <div key={sub.id} className="bg-white rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">{sub.meal?.name}</p>
+                            <p className="text-sm text-gray-600">
+                              Pet: {sub.pet?.name} • {sub.quantity}g • ₹{sub.calculated_price}
+                            </p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
+                            sub.status === 'active' ? 'bg-green-100 text-green-700' :
+                            sub.status === 'paused' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {sub.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowCustomerDetails(false);
+                  handleEdit(selectedCustomer);
+                }}
+                className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+              >
+                <Edit className="w-5 h-5" />
+                Edit Customer
+              </button>
+              <button
+                onClick={() => setShowCustomerDetails(false)}
+                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showWalletModal && selectedCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full my-8">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white rounded-t-xl">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <Wallet className="w-6 h-6" />
+                  Wallet Management
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">{selectedCustomer.name}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowWalletModal(false);
+                  setSelectedCustomer(null);
+                  setWalletView('transactions');
+                  setWalletAmount('');
+                  setWalletDescription('');
+                }}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {/* Current Balance */}
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-6 text-white mb-6">
+                <p className="text-sm opacity-90">Current Balance</p>
+                <p className="text-4xl font-bold">₹{(selectedCustomer.wallet_balance || 0).toFixed(2)}</p>
+              </div>
+
+              {/* View Tabs */}
+              <div className="flex space-x-2 mb-6">
+                <button
+                  onClick={() => setWalletView('transactions')}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    walletView === 'transactions' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Transactions
+                </button>
+                <button
+                  onClick={() => setWalletView('add')}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    walletView === 'add' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Add Balance
+                </button>
+                <button
+                  onClick={() => setWalletView('deduct')}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    walletView === 'deduct' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Deduct Balance
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="max-h-96 overflow-y-auto">
+                {walletView === 'transactions' && (
+                  <div className="space-y-2">
+                    {walletTransactions.length === 0 ? (
+                      <p className="text-center text-gray-500 py-8">No transactions yet</p>
+                    ) : (
+                      walletTransactions.map((tx) => (
+                        <div key={tx.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-full ${tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'}`}>
+                              {tx.type === 'credit' ? (
+                                <ArrowUpCircle className="w-5 h-5 text-green-600" />
+                              ) : (
+                                <ArrowDownCircle className="w-5 h-5 text-red-600" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{tx.description}</p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(tx.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-lg font-bold ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                              {tx.type === 'credit' ? '+' : '-'}₹{parseFloat(tx.amount).toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500">Balance: ₹{parseFloat(tx.balance_after).toFixed(2)}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {walletView === 'add' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Amount to Add</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={walletAmount}
+                        onChange={(e) => setWalletAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
+                      <textarea
+                        value={walletDescription}
+                        onChange={(e) => setWalletDescription(e.target.value)}
+                        rows={3}
+                        placeholder="Enter reason for adding balance..."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => handleWalletTransaction('credit')}
+                      className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <ArrowUpCircle className="w-5 h-5" />
+                      Add ₹{walletAmount || '0.00'} to Wallet
+                    </button>
+                  </div>
+                )}
+
+                {walletView === 'deduct' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Amount to Deduct</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={walletAmount}
+                        onChange={(e) => setWalletAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
+                      <textarea
+                        value={walletDescription}
+                        onChange={(e) => setWalletDescription(e.target.value)}
+                        rows={3}
+                        placeholder="Enter reason for deducting balance..."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => handleWalletTransaction('debit')}
+                      className="w-full px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <ArrowDownCircle className="w-5 h-5" />
+                      Deduct ₹{walletAmount || '0.00'} from Wallet
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

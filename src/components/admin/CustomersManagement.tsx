@@ -25,6 +25,22 @@ export function CustomersManagement() {
   const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
   const [customerPets, setCustomerPets] = useState<any[]>([]);
   const [customerSubscriptions, setCustomerSubscriptions] = useState<any[]>([]);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editedDetails, setEditedDetails] = useState({
+    name: '',
+    alternative_phone: '',
+    delivery_address: '',
+  });
+  const [showPetForm, setShowPetForm] = useState(false);
+  const [editingPet, setEditingPet] = useState<any>(null);
+  const [petFormData, setPetFormData] = useState({
+    name: '',
+    breed: '',
+    age: '',
+    weight: '',
+    medical_condition: '',
+    special_instructions: '',
+  });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -258,6 +274,12 @@ export function CustomersManagement() {
 
   const handleCustomerClick = async (customer: ProfileWithWallet) => {
     setSelectedCustomer(customer);
+    setIsEditingDetails(false);
+    setEditedDetails({
+      name: customer.name,
+      alternative_phone: customer.alternative_phone || '',
+      delivery_address: customer.delivery_address || '',
+    });
 
     // Load customer's pets
     const { data: petsData } = await supabase
@@ -278,6 +300,138 @@ export function CustomersManagement() {
     setCustomerSubscriptions(subsData || []);
 
     setShowCustomerDetails(true);
+  };
+
+  const handleSaveCustomerDetails = async () => {
+    if (!selectedCustomer) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: editedDetails.name,
+          alternative_phone: editedDetails.alternative_phone,
+          delivery_address: editedDetails.delivery_address,
+        })
+        .eq('id', selectedCustomer.id);
+
+      if (error) throw error;
+
+      setIsEditingDetails(false);
+      await loadCustomers();
+
+      // Update selectedCustomer with new data
+      setSelectedCustomer({
+        ...selectedCustomer,
+        name: editedDetails.name,
+        alternative_phone: editedDetails.alternative_phone,
+        delivery_address: editedDetails.delivery_address,
+      });
+
+      alert('Customer details updated successfully');
+    } catch (error) {
+      console.error('Error updating customer details:', error);
+      alert('Failed to update customer details');
+    }
+  };
+
+  const handleAddPet = () => {
+    setPetFormData({
+      name: '',
+      breed: '',
+      age: '',
+      weight: '',
+      medical_condition: '',
+      special_instructions: '',
+    });
+    setEditingPet(null);
+    setShowPetForm(true);
+  };
+
+  const handleEditPet = (pet: any) => {
+    setPetFormData({
+      name: pet.name,
+      breed: pet.breed,
+      age: pet.age.toString(),
+      weight: pet.weight.toString(),
+      medical_condition: pet.medical_condition || '',
+      special_instructions: pet.special_instructions || '',
+    });
+    setEditingPet(pet);
+    setShowPetForm(true);
+  };
+
+  const handleSavePet = async () => {
+    if (!selectedCustomer) return;
+
+    try {
+      const petData = {
+        name: petFormData.name,
+        breed: petFormData.breed,
+        age: parseInt(petFormData.age),
+        weight: parseFloat(petFormData.weight),
+        medical_condition: petFormData.medical_condition,
+        special_instructions: petFormData.special_instructions,
+        customer_id: selectedCustomer.id,
+      };
+
+      if (editingPet) {
+        const { error } = await supabase
+          .from('pets')
+          .update(petData)
+          .eq('id', editingPet.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('pets')
+          .insert(petData);
+
+        if (error) throw error;
+      }
+
+      setShowPetForm(false);
+      setEditingPet(null);
+
+      // Reload pets
+      const { data: petsData } = await supabase
+        .from('pets')
+        .select('*')
+        .eq('customer_id', selectedCustomer.id);
+      setCustomerPets(petsData || []);
+
+      alert(`Pet ${editingPet ? 'updated' : 'added'} successfully`);
+    } catch (error) {
+      console.error('Error saving pet:', error);
+      alert('Failed to save pet');
+    }
+  };
+
+  const handleDeletePet = async (petId: string) => {
+    if (!confirm('Are you sure you want to delete this pet?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('pets')
+        .delete()
+        .eq('id', petId);
+
+      if (error) throw error;
+
+      // Reload pets
+      if (selectedCustomer) {
+        const { data: petsData } = await supabase
+          .from('pets')
+          .select('*')
+          .eq('customer_id', selectedCustomer.id);
+        setCustomerPets(petsData || []);
+      }
+
+      alert('Pet deleted successfully');
+    } catch (error) {
+      console.error('Error deleting pet:', error);
+      alert('Failed to delete pet');
+    }
   };
 
   const handleWalletClick = async (customer: ProfileWithWallet) => {
@@ -792,53 +946,116 @@ export function CustomersManagement() {
 
       {showCustomerDetails && selectedCustomer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full my-8">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white rounded-t-xl">
-              <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <User className="w-6 h-6" />
-                Customer Details
-              </h3>
-              <button
-                onClick={() => {
-                  setShowCustomerDetails(false);
-                  setSelectedCustomer(null);
-                }}
-                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
+          <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full my-8">
+            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl z-10">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <User className="w-6 h-6" />
+                  Customer Profile
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCustomerDetails(false);
+                    setSelectedCustomer(null);
+                    setIsEditingDetails(false);
+                    setShowPetForm(false);
+                  }}
+                  className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
               {/* Customer Info */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  Personal Information
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <User className="w-5 h-5" />
+                    Personal Information
+                  </h4>
+                  {!isEditingDetails ? (
+                    <button
+                      onClick={() => setIsEditingDetails(true)}
+                      className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm flex items-center gap-1"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveCustomerDetails}
+                        className="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm flex items-center gap-1"
+                      >
+                        <Save className="w-4 h-4" />
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditingDetails(false);
+                          setEditedDetails({
+                            name: selectedCustomer.name,
+                            alternative_phone: selectedCustomer.alternative_phone || '',
+                            delivery_address: selectedCustomer.delivery_address || '',
+                          });
+                        }}
+                        className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Name</p>
-                    <p className="font-medium text-gray-900">{selectedCustomer.name}</p>
+                    <p className="text-sm text-gray-600 mb-1">Name</p>
+                    {isEditingDetails ? (
+                      <input
+                        type="text"
+                        value={editedDetails.name}
+                        onChange={(e) => setEditedDetails({ ...editedDetails, name: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <p className="font-medium text-gray-900">{selectedCustomer.name}</p>
+                    )}
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Email</p>
+                    <p className="text-sm text-gray-600 mb-1">Email</p>
                     <p className="font-medium text-gray-900">{selectedCustomer.email || 'N/A'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Phone</p>
+                    <p className="text-sm text-gray-600 mb-1">Phone</p>
                     <p className="font-medium text-gray-900">{selectedCustomer.phone}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Alternative Phone</p>
-                    <p className="font-medium text-gray-900">{selectedCustomer.alternative_phone || 'N/A'}</p>
+                    <p className="text-sm text-gray-600 mb-1">Alternative Phone</p>
+                    {isEditingDetails ? (
+                      <input
+                        type="tel"
+                        value={editedDetails.alternative_phone}
+                        onChange={(e) => setEditedDetails({ ...editedDetails, alternative_phone: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <p className="font-medium text-gray-900">{selectedCustomer.alternative_phone || 'N/A'}</p>
+                    )}
                   </div>
-                  {selectedCustomer.delivery_address && (
-                    <div className="col-span-2">
-                      <p className="text-sm text-gray-600">Delivery Address</p>
-                      <p className="font-medium text-gray-900">{selectedCustomer.delivery_address}</p>
-                    </div>
-                  )}
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-gray-600 mb-1">Delivery Address</p>
+                    {isEditingDetails ? (
+                      <textarea
+                        value={editedDetails.delivery_address}
+                        onChange={(e) => setEditedDetails({ ...editedDetails, delivery_address: e.target.value })}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <p className="font-medium text-gray-900">{selectedCustomer.delivery_address || 'Not provided'}</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -866,25 +1083,48 @@ export function CustomersManagement() {
 
               {/* Pets */}
               <div className="bg-blue-50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <PawPrint className="w-5 h-5" />
-                  Pets ({customerPets.length})
-                </h4>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <PawPrint className="w-5 h-5" />
+                    Pets ({customerPets.length})
+                  </h4>
+                  <button
+                    onClick={handleAddPet}
+                    className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm flex items-center gap-1"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Pet
+                  </button>
+                </div>
                 {customerPets.length === 0 ? (
                   <p className="text-sm text-gray-600">No pets registered</p>
                 ) : (
                   <div className="space-y-2">
                     {customerPets.map((pet) => (
                       <div key={pet.id} className="bg-white rounded-lg p-3">
-                        <div className="flex items-center justify-between">
-                          <div>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
                             <p className="font-medium text-gray-900">{pet.name}</p>
                             <p className="text-sm text-gray-600">{pet.breed} • {pet.age} years • {pet.weight}g</p>
+                            {pet.medical_condition && (
+                              <p className="text-xs text-gray-500 mt-1">Medical: {pet.medical_condition}</p>
+                            )}
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleEditPet(pet)}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePet(pet.id)}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
-                        {pet.medical_condition && (
-                          <p className="text-xs text-gray-500 mt-1">Medical: {pet.medical_condition}</p>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -925,22 +1165,108 @@ export function CustomersManagement() {
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200 flex space-x-3">
-              <button
-                onClick={() => {
-                  setShowCustomerDetails(false);
-                  handleEdit(selectedCustomer);
-                }}
-                className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
-              >
-                <Edit className="w-5 h-5" />
-                Edit Customer
-              </button>
+            <div className="p-6 border-t border-gray-200">
               <button
                 onClick={() => setShowCustomerDetails(false)}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pet Form Modal */}
+      {showPetForm && selectedCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <PawPrint className="w-5 h-5" />
+                {editingPet ? 'Edit Pet' : 'Add New Pet'}
+              </h3>
+            </div>
+            <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pet Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={petFormData.name}
+                    onChange={(e) => setPetFormData({ ...petFormData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Breed *</label>
+                  <input
+                    type="text"
+                    required
+                    value={petFormData.breed}
+                    onChange={(e) => setPetFormData({ ...petFormData, breed: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Age (years) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={petFormData.age}
+                    onChange={(e) => setPetFormData({ ...petFormData, age: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Weight (grams) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={petFormData.weight}
+                    onChange={(e) => setPetFormData({ ...petFormData, weight: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Medical Condition</label>
+                <textarea
+                  value={petFormData.medical_condition}
+                  onChange={(e) => setPetFormData({ ...petFormData, medical_condition: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Special Instructions</label>
+                <textarea
+                  value={petFormData.special_instructions}
+                  onChange={(e) => setPetFormData({ ...petFormData, special_instructions: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex space-x-3">
+              <button
+                onClick={handleSavePet}
+                className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+              >
+                {editingPet ? 'Update Pet' : 'Add Pet'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowPetForm(false);
+                  setEditingPet(null);
+                }}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -950,33 +1276,35 @@ export function CustomersManagement() {
       {showWalletModal && selectedCustomer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full my-8">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white rounded-t-xl">
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  <Wallet className="w-6 h-6" />
-                  Wallet Management
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">{selectedCustomer.name}</p>
+            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0 pr-4">
+                  <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <Wallet className="w-6 h-6 flex-shrink-0" />
+                    <span>Wallet Management</span>
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1 truncate">{selectedCustomer.name}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowWalletModal(false);
+                    setSelectedCustomer(null);
+                    setWalletView('transactions');
+                    setWalletAmount('');
+                    setWalletDescription('');
+                  }}
+                  className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg flex-shrink-0"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  setShowWalletModal(false);
-                  setSelectedCustomer(null);
-                  setWalletView('transactions');
-                  setWalletAmount('');
-                  setWalletDescription('');
-                }}
-                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
             <div className="p-6">
               {/* Current Balance */}
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-6 text-white mb-6">
-                <p className="text-sm opacity-90">Current Balance</p>
-                <p className="text-4xl font-bold">₹{(selectedCustomer.wallet_balance || 0).toFixed(2)}</p>
+                <p className="text-sm opacity-90 mb-1">Current Balance</p>
+                <p className="text-3xl md:text-4xl font-bold">₹{(selectedCustomer.wallet_balance || 0).toFixed(2)}</p>
               </div>
 
               {/* View Tabs */}

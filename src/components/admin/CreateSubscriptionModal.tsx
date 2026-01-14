@@ -530,7 +530,7 @@ export function CreateSubscriptionModal({ onClose, onSuccess, preselectedCustome
         selectedCustomerId,
         finalPrice,
         `Subscription ${subscription.id}`,
-        'subscription'
+        'subscription_charge'
       );
 
       if (walletDeduction.success) {
